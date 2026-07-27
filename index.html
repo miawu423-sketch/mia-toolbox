@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>工具箱 for 数据处理</title>
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --card-bg: #ffffff;
+    --border: #e6e8ef;
+    --text: #1f2330;
+    --text-muted: #6b7183;
+    --accent: #4f46e5;
+    --accent-soft: #eef2ff;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.1);
+    --radius: 14px;
+    --tag-bg: #f1f3f9;
+    --sticky-bg: #fff9c4;
+    --sticky-border: #f4d35e;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+
+  .page {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+
+  /* Header */
+  .hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+  }
+  .hero-left h1 {
+    font-size: 32px;
+    margin: 0 0 6px 0;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .hero-left .subtitle {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  .hero-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .btn-sticky {
+    background: var(--sticky-bg);
+    border: 1px solid var(--sticky-border);
+    color: #6b4f00;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(244, 211, 94, 0.35);
+    transition: transform 0.15s ease;
+  }
+  .btn-sticky:hover { transform: translateY(-1px); }
+
+  .stats {
+    display: flex;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .stats .pill {
+    background: var(--tag-bg);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+
+  /* Grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 22px 18px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+  .card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .card-icon {
+    font-size: 30px;
+    line-height: 1;
+  }
+  .card-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0 0 2px 0;
+  }
+  .card-version {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    vertical-align: middle;
+  }
+  .card-desc {
+    font-size: 13.5px;
+    color: var(--text);
+    margin: 0 0 12px 0;
+  }
+  .card-section-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    margin: 10px 0 6px 0;
+  }
+  .card-scenarios {
+    margin: 0 0 14px 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .card-scenarios li {
+    position: relative;
+    padding-left: 18px;
+    margin-bottom: 4px;
+    color: #3f4657;
+  }
+  .card-scenarios li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .tag {
+    background: var(--tag-bg);
+    color: var(--text-muted);
+    font-size: 11.5px;
+    padding: 3px 9px;
+    border-radius: 6px;
+  }
+  .card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
+  }
+  .btn {
+    flex: 1;
+    text-align: center;
+    padding: 10px 12px;
+    border-radius: 9px;
+    font-size: 13.5px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.15s ease;
+  }
+  .btn:hover { background: #f8f9fc; }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .btn-primary:hover {
+    background: #4338ca;
+    border-color: #4338ca;
+  }
+
+  /* Changelog drawer inside card */
+  .changelog {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    border-top: 1px dashed var(--border);
+    margin-top: 12px;
+  }
+  .changelog.open { max-height: 500px; }
+  .changelog-inner {
+    padding: 12px 4px 2px;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .changelog-item {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .changelog-item .ver {
+    color: var(--accent);
+    font-weight: 700;
+    flex: 0 0 40px;
+  }
+  .changelog-item .desc {
+    color: #3f4657;
+    flex: 1;
+  }
+  .changelog-item .date {
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+
+  /* Sticky note modal */
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 24px;
+  }
+  .backdrop.open { display: flex; }
+  .sticky-note {
+    background: var(--sticky-bg);
+    border: 1px solid var(--sticky-border);
+    border-radius: 6px;
+    padding: 28px 30px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25), inset 0 0 40px rgba(244, 211, 94, 0.15);
+    position: relative;
+    transform: rotate(-1deg);
+    font-family: "Marker Felt", "Comic Sans MS", -apple-system, "PingFang SC", sans-serif;
+  }
+  .sticky-note::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-2deg);
+    width: 90px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+  .sticky-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #4a3200;
+    margin: 0 0 4px 0;
+  }
+  .sticky-sub {
+    font-size: 12px;
+    color: #7a5b00;
+    margin-bottom: 18px;
+  }
+  .sticky-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: #7a5b00;
+    line-height: 1;
+  }
+  .sticky-log-item {
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: #3d2c00;
+    padding-left: 4px;
+  }
+  .sticky-log-item .stk-ver {
+    font-weight: 700;
+    color: #b45309;
+  }
+  .sticky-log-item .stk-date {
+    font-size: 11px;
+    color: #8a6b00;
+    margin-left: 6px;
+  }
+  .sticky-log-item ul {
+    margin: 4px 0 0 0;
+    padding-left: 20px;
+  }
+  .sticky-log-item ul li { margin-bottom: 2px; }
+
+  footer {
+    margin-top: 60px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  @media (max-width: 640px) {
+    .page { padding: 24px 16px 60px; }
+    .hero-left h1 { font-size: 24px; }
+  }
+
+  /* Security bar */
+  .security-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+    border: 1px solid #a7f3d0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .security-bar:hover {
+    background: linear-gradient(135deg, #d1fae5 0%, #dcfce7 100%);
+    transform: translateY(-1px);
+  }
+  .sec-icon { font-size: 22px; }
+  .sec-text { flex: 1; color: #065f46; font-size: 14px; }
+  .sec-more { color: #059669; font-weight: 500; margin-left: 6px; }
+
+  .security-detail {
+    display: none;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 13.5px;
+    color: var(--text);
+  }
+  .security-detail.open { display: block; }
+  .sec-block { margin-bottom: 14px; }
+  .sec-block:last-child { margin-bottom: 0; }
+  .sec-block h4 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: var(--accent);
+  }
+  .sec-block p, .sec-block ul { margin: 0; color: var(--text-muted); }
+  .sec-block ul { padding-left: 20px; }
+  .sec-block li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="hero">
+    <div class="hero-left">
+      <h1>🧰 工具箱 <span style="color: var(--text-muted); font-weight: 500; font-size: 22px;">for 数据处理</span></h1>
+      <div class="subtitle">持续更新中 · 全部工具纯前端运行，数据不出本地浏览器</div>
+    </div>
+    <div class="hero-right">
+      <div class="stats">
+        <span class="pill">4 个工具</span>
+        <span class="pill">v1.0.2</span>
+      </div>
+      <button class="btn-sticky" onclick="openStickyNote()">📝 工具箱更新日志</button>
+    </div>
+  </div>
+
+  <!-- 安全声明横条 -->
+  <div class="security-bar" onclick="toggleSecurity()">
+    <div class="sec-icon">🔒</div>
+    <div class="sec-text">
+      <strong>数据安全承诺：</strong>所有工具在你的浏览器本地运行，粘贴/上传的数据<u>不会</u>发送到任何服务器。
+      <span class="sec-more">点击查看详细说明 ▾</span>
+    </div>
+  </div>
+  <div class="security-detail" id="securityDetail">
+    <div class="sec-block">
+      <h4>🧐 为什么是安全的？</h4>
+      <p>本工具箱是<strong>纯静态站点</strong>：云端只负责把 HTML/JS 代码发到你的浏览器，之后所有处理都在你的电脑上完成，数据全程不离开本机浏览器。</p>
+    </div>
+    <div class="sec-block">
+      <h4>✅ 你可以这样验证</h4>
+      <ul>
+        <li><strong>断网测试</strong>：打开工具后关闭 WiFi，工具照常工作 = 证明没往外传</li>
+        <li><strong>Network 面板</strong>：F12 → Network → 粘数据点处理 → 没有新请求 = 数据在本地</li>
+      </ul>
+    </div>
+    <div class="sec-block">
+      <h4>📌 建议注意事项</h4>
+      <ul>
+        <li>共享电脑用完后请刷新页面或关闭 tab</li>
+        <li>工具默认不使用 localStorage 持久化数据</li>
+        <li>Excel 相关工具会从 jsDelivr CDN 加载解析库（仅加载库文件，不上传你的数据）</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    Made by Mia · 建议同事本地保存整个文件夹，双击 <code>index.html</code> 直接使用 · 有 bug / 建议欢迎反馈
+  </footer>
+</div>
+
+<!-- Sticky note modal -->
+<div class="backdrop" id="stickyBackdrop" onclick="if(event.target.id==='stickyBackdrop') closeStickyNote()">
+  <div class="sticky-note">
+    <button class="sticky-close" onclick="closeStickyNote()">×</button>
+    <div class="sticky-title">📌 工具箱更新日志</div>
+    <div class="sticky-sub">工具箱本身的迭代记录（不是单个工具的）</div>
+    <div id="stickyLog"></div>
+  </div>
+</div>
+
+<script>
+/* ============ 数据：4 个工具 ============ */
+const TOOLS = [
+  {
+    id: '01-random-sampler',
+    file: 'random-sampler.html',
+    icon: '🎲',
+    name: '随机抽样',
+    version: 'v1.1',
+    desc: '粘贴或上传表格数据，按需配置抽样规则（含筛选、去重、分层、偏差观测），快速拿到随机样本。',
+    scenarios: [
+      '从大 query 集合中抽 N 条 case 做人工评测',
+      '按 prompt / subq 二级分层抽样，保证覆盖度',
+      '抽样前后对比某字段占比偏差，验证抽样代表性',
+    ],
+    tags: ['CSV/TSV', '联合主键去重', '分层抽样', '偏差观测'],
+    changelog: [
+      { ver: 'v1.1', date: '2026-07', desc: '增加算式筛选 + 偏差阈值提示' },
+      { ver: 'v1.0', date: '2026-05', desc: '首个版本：值筛选 / 分层抽样 / XLSX 导出' },
+    ],
+  },
+  {
+    id: '02-dedup',
+    file: 'dedup.html',
+    icon: '✨',
+    name: '表格数据去重工具',
+    version: 'v1.0',
+    desc: '完全在本地浏览器中运行，支持 Excel / CSV / JSON。带数据清洗 + 防错位校验，保证去重结果可信。',
+    scenarios: [
+      '对评测数据按 URL / query 精确去重',
+      '导入前对 Excel 做一次可视化查重',
+      '需要"严格验证 + 防错位"的正式产出场景',
+    ],
+    tags: ['xlsx/csv/json', '本地运行', '严格校验'],
+    changelog: [
+      { ver: 'v1.0', date: '2026-03', desc: '首个版本：多列查重 / 保留策略 / 数据清洗 / 防错位校验' },
+    ],
+  },
+  {
+    id: '03-url-codec',
+    file: 'url-codec.html',
+    icon: '🔗',
+    name: 'URL encode/decode',
+    version: 'v1.0',
+    desc: '快速对 URL 或参数做编码 / 解码，处理中文、特殊字符、%XX 转义。',
+    scenarios: [
+      '看到 %E4%B8%AD 想知道原本是什么',
+      '把中文参数拼成合法 URL',
+      '排查线上 URL 里 %22、%2F 之类的转义问题',
+    ],
+    tags: ['URL 编码', '批量粘贴'],
+    changelog: [
+      { ver: 'v1.0', date: '2026-04', desc: '首个版本：单条 / 批量 encode + decode' },
+    ],
+  },
+  {
+    id: '04-table-viewer',
+    file: 'table-viewer.html',
+    icon: '📋',
+    name: '长表格查看器',
+    version: 'v1.0',
+    desc: '专门对付又长又宽、单元格里塞了 JSON 的表格。支持树形展开、原文对照、新增列、导出 CSV/XLSX。',
+    scenarios: [
+      '看几万行、几十列的评测导出数据',
+      '单元格里是 JSON / 长文本，需要美化查看',
+      '在原表基础上打标签、加辅助列并导出',
+    ],
+    tags: ['大表格', 'JSON 美化', '导出 CSV/XLSX'],
+    changelog: [
+      { ver: 'v1.0', date: '2026-07', desc: '首个版本：树形查看 / 新增列 / 撤销 / 导出' },
+    ],
+  },
+];
+
+/* ============ 工具箱整体更新日志 ============ */
+const TOOLBOX_CHANGELOG = [
+  {
+    ver: 'v1.0.2',
+    date: '2026-07-27',
+    items: [
+      '🔢 工具编号重排为 01–04（去掉①下线后的编号断层）',
+      '目录结构：01-random-sampler / 02-dedup / 03-url-codec / 04-table-viewer',
+    ],
+  },
+  {
+    ver: 'v1.0.1',
+    date: '2026-07-27',
+    items: [
+      '🗑️ 移除「发布时间自动标注」（依赖本地 Ollama+Qwen，不适合共享部署）',
+      '📁 工具入口文件重命名为语义化名称（随机抽样→random-sampler.html 等）',
+      '当前收录 4 个纯前端工具',
+    ],
+  },
+  {
+    ver: 'v1.0.0',
+    date: '2026-07-27',
+    items: [
+      '🎉 工具箱首次上线',
+      '每个工具卡片支持"使用场景 + 版本 + 更新日志"',
+      '整个工具箱纯前端，双击 index.html 即可使用',
+    ],
+  },
+];
+
+/* ============ 渲染卡片 ============ */
+const grid = document.getElementById('grid');
+TOOLS.forEach((t, idx) => {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div class="card-head">
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <div class="card-icon">${t.icon}</div>
+        <div>
+          <div class="card-title">${t.name} <span class="card-version">${t.version}</span></div>
+          <div style="color: var(--text-muted); font-size: 12px;">Tool ${String(idx + 1).padStart(2,'0')}</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-desc">${t.desc}</div>
+
+    <div class="card-section-label">典型场景</div>
+    <ul class="card-scenarios">
+      ${t.scenarios.map(s => `<li>${s}</li>`).join('')}
+    </ul>
+
+    <div class="card-tags">
+      ${t.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+    </div>
+
+    <div class="card-actions">
+      <a class="btn btn-primary" href="tools/${t.id}/${t.file}" target="_blank" rel="noopener">打开工具 ↗</a>
+      <button class="btn" onclick="toggleChangelog(this)">更新日志</button>
+    </div>
+
+    <div class="changelog">
+      <div class="changelog-inner">
+        ${t.changelog.map(c => `
+          <div class="changelog-item">
+            <span class="ver">${c.ver}</span>
+            <span class="desc">${c.desc} <span class="date">· ${c.date}</span></span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  grid.appendChild(card);
+});
+
+function toggleChangelog(btn) {
+  const drawer = btn.closest('.card').querySelector('.changelog');
+  drawer.classList.toggle('open');
+  btn.textContent = drawer.classList.contains('open') ? '收起日志' : '更新日志';
+}
+
+/* ============ 便签更新日志 ============ */
+function renderStickyLog() {
+  const box = document.getElementById('stickyLog');
+  box.innerHTML = TOOLBOX_CHANGELOG.map(v => `
+    <div class="sticky-log-item">
+      <span class="stk-ver">${v.ver}</span>
+      <span class="stk-date">${v.date}</span>
+      <ul>${v.items.map(i => `<li>${i}</li>`).join('')}</ul>
+    </div>
+  `).join('');
+}
+renderStickyLog();
+
+function openStickyNote() {
+  document.getElementById('stickyBackdrop').classList.add('open');
+}
+function closeStickyNote() {
+  document.getElementById('stickyBackdrop').classList.remove('open');
+}
+function toggleSecurity() {
+  document.getElementById('securityDetail').classList.toggle('open');
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeStickyNote();
+});
+</script>
+</body>
+</html>

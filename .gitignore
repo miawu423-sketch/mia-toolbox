@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+._*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+
+# Node (if we later add build tools)
+node_modules/
+dist/
+build/
+
+# Env
+.env
+.env.local
+
+# WorkBuddy internal
+.workbuddy/

@@ -1,0 +1,826 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>长表格查看器</title>
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-soft: #eff6ff;
+    --key: #9333ea;
+    --str: #16a34a;
+    --num: #ea580c;
+    --bool: #0891b2;
+    --null: #6b7280;
+    --status-ok: #16a34a;
+    --status-warn: #ea580c;
+    --status-err: #dc2626;
+    --dirty: #f59e0b;
+    --dirty-soft: #fef3c7;
+    --danger: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    color: var(--text); background: var(--bg);
+    display: flex; flex-direction: column;
+  }
+  header {
+    padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  header .meta { color: var(--muted); font-size: 12px; }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex: 1; flex-wrap: wrap; }
+  .toolbar input[type=search], .toolbar select {
+    padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); font: inherit; color: inherit; min-width: 200px;
+  }
+  .toolbar button, .toolbar label.file-btn {
+    padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--panel); cursor: pointer; font: inherit;
+  }
+  .toolbar button:hover, .toolbar label.file-btn:hover {
+    background: var(--accent-soft); border-color: var(--accent); color: var(--accent);
+  }
+  .toolbar button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .toolbar button.primary:hover { filter: brightness(1.05); color: white; }
+  .toolbar button.warn { color: var(--dirty); }
+  .toolbar .count { color: var(--muted); font-size: 12px; margin-left: auto; }
+  .dirty-badge {
+    background: var(--dirty-soft); color: #92400e; border: 1px solid #fde68a;
+    padding: 2px 8px; border-radius: 999px; font-size: 12px; display: none;
+  }
+  .dirty-badge.show { display: inline-block; }
+
+  main { flex: 1; display: grid; grid-template-columns: 380px 1fr; min-height: 0; }
+  aside {
+    background: var(--panel); border-right: 1px solid var(--border);
+    overflow-y: auto;
+  }
+  .row {
+    padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .row:hover { background: var(--accent-soft); }
+  .row.active { background: var(--accent-soft); border-left: 3px solid var(--accent); padding-left: 11px; }
+  .row .title { font-weight: 500; word-break: break-all; font-size: 13px; }
+  .row .sub { color: var(--muted); font-size: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .row.dirty-row .title::after {
+    content: "●"; color: var(--dirty); margin-left: 6px; font-size: 10px;
+  }
+  .status-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--status-ok); margin-right: 4px; vertical-align: middle;
+  }
+  .status-1 .status-dot { background: var(--status-warn); }
+  .status-0 .status-dot, .status--1 .status-dot { background: var(--status-err); }
+
+  section.detail { overflow-y: auto; padding: 18px 22px; background: var(--bg); }
+  .empty { color: var(--muted); text-align: center; margin-top: 40vh; }
+
+  .fields { display: grid; grid-template-columns: 130px 1fr auto; gap: 6px 12px; margin-bottom: 18px; align-items: start; }
+  .fields .k {
+    color: var(--muted); font-size: 12px; padding-top: 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .fields .k .col-del {
+    color: var(--danger); cursor: pointer; font-size: 12px; opacity: 0; transition: opacity .15s;
+    background: none; border: none; padding: 0; line-height: 1;
+  }
+  .fields .k:hover .col-del { opacity: 1; }
+  .fields .v {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+    min-height: 30px;
+  }
+  .fields .v.dirty { border-color: var(--dirty); background: var(--dirty-soft); }
+  .fields .v .cell-input {
+    display: block; width: 100%; border: none; background: transparent;
+    padding: 6px 10px; font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px; color: inherit; resize: vertical; min-height: 30px;
+    max-height: 200px;
+  }
+  .fields .v .cell-input:focus { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+  .fields .v .cell-link {
+    display: block; padding: 6px 10px; word-break: break-all; font-size: 12.5px;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  .fields .actions { padding-top: 4px; display: flex; gap: 4px; }
+  .fields .actions button {
+    padding: 3px 8px; font-size: 11px; border: 1px solid var(--border);
+    background: var(--panel); border-radius: 4px; cursor: pointer;
+  }
+  .fields .actions button:hover { border-color: var(--accent); color: var(--accent); }
+
+  .result-box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .result-box.dirty { border-color: var(--dirty); }
+  .result-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+    gap: 10px; flex-wrap: wrap;
+  }
+  .result-header .title { font-weight: 600; }
+  .result-header .info { color: var(--muted); font-size: 12px; }
+  .result-header .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .result-header button {
+    padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); cursor: pointer; font: inherit; font-size: 12px;
+  }
+  .result-header button.on { background: var(--accent); color: white; border-color: var(--accent); }
+
+  .tree { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.65; }
+  .tree .node { padding-left: 16px; position: relative; }
+  .tree .caret {
+    position: absolute; left: 0; top: 0; width: 14px; cursor: pointer;
+    user-select: none; color: var(--muted);
+  }
+  .tree .caret::before { content: "▾"; }
+  .tree .node.collapsed > .caret::before { content: "▸"; }
+  .tree .node.collapsed > .children { display: none; }
+  .tree .k { color: var(--key); }
+  .tree .s { color: var(--str); word-break: break-all; }
+  .tree .n { color: var(--num); }
+  .tree .b { color: var(--bool); }
+  .tree .nu { color: var(--null); }
+  .tree .brace { color: var(--muted); }
+  .tree .summary { color: var(--muted); font-style: italic; margin-left: 4px; }
+
+  .string-long {
+    white-space: pre-wrap; word-break: break-word; max-height: 320px;
+    overflow: auto; background: var(--bg); border-radius: 4px; padding: 6px 8px;
+    display: inline-block; max-width: 100%;
+  }
+
+  textarea.raw-editor {
+    width: 100%; min-height: 260px; max-height: 70vh; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--bg);
+    font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace;
+    resize: vertical;
+  }
+  textarea.raw-editor:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  mark { background: #fef08a; color: inherit; padding: 0 1px; border-radius: 2px; }
+
+  /* 模态框 */
+  .modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none;
+    align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal-mask.show { display: flex; }
+  .modal {
+    background: var(--panel); border-radius: 10px; padding: 20px 22px;
+    min-width: 360px; max-width: 480px; box-shadow: 0 10px 40px rgba(0,0,0,.15);
+  }
+  .modal h3 { margin: 0 0 12px; font-size: 15px; }
+  .modal label { display: block; margin: 10px 0 4px; font-size: 12px; color: var(--muted); }
+  .modal input, .modal textarea, .modal select {
+    width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font: inherit; background: var(--bg); color: inherit;
+  }
+  .modal textarea { min-height: 80px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; }
+  .modal .modal-actions {
+    display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;
+  }
+  .modal .modal-actions button {
+    padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--panel); cursor: pointer; font: inherit;
+  }
+  .modal .modal-actions button.primary {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #111827; color: white; padding: 8px 16px; border-radius: 8px;
+    font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none;
+    z-index: 200;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>长表格查看器</h1>
+  <span class="meta" id="fileMeta">未加载</span>
+  <span class="dirty-badge" id="dirtyBadge">未保存修改：0</span>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="搜索（全字段模糊匹配）…" />
+    <select id="statusFilter"><option value="">全部状态</option></select>
+    <button id="addColumnBtn" title="新增一列">+ 新增列</button>
+    <button id="exportCsvBtn" class="primary">导出 CSV</button>
+    <button id="exportXlsxBtn">导出 XLSX</button>
+    <button id="revertBtn" class="warn" title="撤销所有未保存修改">撤销</button>
+    <label class="file-btn" title="载入 CSV / XLSX">载入<input type="file" id="fileInput" accept=".csv,.tsv,.txt,.xlsx,.xls" hidden /></label>
+    <span class="count" id="count"></span>
+  </div>
+</header>
+<main>
+  <aside id="list"></aside>
+  <section class="detail" id="detail"><div class="empty">从左侧选择一条记录查看详情</div></section>
+</main>
+
+<!-- 新增列 -->
+<div class="modal-mask" id="addColModal">
+  <div class="modal">
+    <h3>新增列</h3>
+    <label>列名</label>
+    <input id="newColName" placeholder="例如：note、tag、reviewed" />
+    <label>默认值（所有行）</label>
+    <input id="newColDefault" placeholder="留空则为 空字符串" />
+    <div class="modal-actions">
+      <button data-close>取消</button>
+      <button class="primary" id="newColConfirm">添加</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+/* ============== 状态 ============== */
+const state = {
+  columns: [],       // 有序列名（可增删）
+  rows: [],          // 数据行（每行是 {col: value}）
+  filtered: [],
+  activeIdx: -1,
+  q: "",
+  statusFilter: "",
+  view: "tree",      // tree | raw
+  sourceName: "",
+  dirtyCells: new Set(),   // "rowIndex::col" 集合
+  originalSnapshot: null,  // 用于撤销
+};
+
+/* ============== SheetJS（用于 XLSX 导出）动态加载 ============== */
+let SheetJSPromise = null;
+function loadSheetJS() {
+  if (SheetJSPromise) return SheetJSPromise;
+  SheetJSPromise = new Promise((resolve, reject) => {
+    if (window.XLSX) return resolve(window.XLSX);
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js";
+    s.onload = () => resolve(window.XLSX);
+    s.onerror = () => reject(new Error("SheetJS 加载失败，可能需要联网。可改用 CSV 导出。"));
+    document.head.appendChild(s);
+  });
+  return SheetJSPromise;
+}
+
+/* ============== CSV 解析（RFC4180） ============== */
+function parseCSV(text) {
+  const rows = [];
+  let cur = [], val = "", inQ = false, i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i+1] === '"') { val += '"'; i += 2; continue; }
+        inQ = false; i++; continue;
+      }
+      val += c; i++; continue;
+    }
+    if (c === '"') { inQ = true; i++; continue; }
+    if (c === ',') { cur.push(val); val = ""; i++; continue; }
+    if (c === '\r') { i++; continue; }
+    if (c === '\n') { cur.push(val); rows.push(cur); cur = []; val = ""; i++; continue; }
+    val += c; i++;
+  }
+  if (val.length || cur.length) { cur.push(val); rows.push(cur); }
+  if (!rows.length) return { columns: [], rows: [] };
+  const header = rows.shift();
+  const data = rows.filter(r => r.length && !(r.length === 1 && r[0] === "")).map(r => {
+    const o = {};
+    header.forEach((h, idx) => { o[h] = r[idx] ?? ""; });
+    return o;
+  });
+  return { columns: header, rows: data };
+}
+
+/* ============== XLSX 解析 ============== */
+async function parseXLSX(arrayBuffer) {
+  const XLSX = await loadSheetJS();
+  const wb = XLSX.read(arrayBuffer, { type: "array" });
+  const sheetNames = wb.SheetNames;
+  if (!sheetNames.length) throw new Error("XLSX 中未找到工作表");
+  let target = sheetNames[0];
+  if (sheetNames.length > 1) {
+    const pick = prompt(
+      `该 XLSX 包含 ${sheetNames.length} 个工作表：\n${sheetNames.map((n, i) => `${i + 1}. ${n}`).join("\n")}\n\n输入编号（回车默认 1）：`,
+      "1"
+    );
+    if (pick === null) throw new Error("已取消");
+    const idx = Math.max(1, Math.min(sheetNames.length, parseInt(pick, 10) || 1)) - 1;
+    target = sheetNames[idx];
+  }
+  const ws = wb.Sheets[target];
+  // 以 header:1 拿二维数组，defval 保证空单元格是 ""；raw:false 让数字/日期自动格式化为字符串
+  const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false, blankrows: false });
+  if (!aoa.length) return { columns: [], rows: [], sheetName: target };
+  const header = aoa[0].map(h => String(h ?? "").trim() || "col");
+  // 去重列名
+  const seen = new Map();
+  const columns = header.map(h => {
+    const n = (seen.get(h) || 0) + 1;
+    seen.set(h, n);
+    return n === 1 ? h : `${h}_${n}`;
+  });
+  const rows = aoa.slice(1).filter(r => r.some(v => String(v ?? "") !== "")).map(r => {
+    const o = {};
+    columns.forEach((c, i) => { o[c] = r[i] == null ? "" : String(r[i]); });
+    return o;
+  });
+  return { columns, rows, sheetName: target };
+}
+
+/* ============== 文件加载统一入口 ============== */
+async function loadFile(file) {
+  const name = file.name || "";
+  const ext = name.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] || "";
+  try {
+    if (ext === "xlsx" || ext === "xls") {
+      toast("正在解析 XLSX…");
+      const buf = await file.arrayBuffer();
+      const { columns, rows, sheetName } = await parseXLSX(buf);
+      loadData(columns, rows, name + (sheetName ? ` [${sheetName}]` : ""));
+    } else {
+      const text = await file.text();
+      const { columns, rows } = parseCSV(text);
+      loadData(columns, rows, name);
+    }
+  } catch (e) {
+    toast("加载失败：" + e.message);
+  }
+}
+
+/* ============== CSV 序列化 ============== */
+function serializeCSV(columns, rows) {
+  const esc = v => {
+    v = v == null ? "" : String(v);
+    if (/[",\r\n]/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+    return v;
+  };
+  const lines = [columns.map(esc).join(",")];
+  for (const r of rows) lines.push(columns.map(c => esc(r[c])).join(","));
+  return lines.join("\n");
+}
+
+/* ============== 加载数据 ============== */
+function loadData(columns, rows, sourceName) {
+  state.columns = [...columns];
+  state.rows = rows.map(r => {
+    const o = {};
+    for (const c of columns) o[c] = r[c] ?? "";
+    return o;
+  });
+  state.sourceName = sourceName;
+  state.activeIdx = -1;
+  state.dirtyCells.clear();
+  state.originalSnapshot = JSON.stringify({ columns: state.columns, rows: state.rows });
+  updateDirtyBadge();
+  document.getElementById("fileMeta").textContent =
+    `${sourceName} · ${rows.length} 条 · ${columns.length} 列`;
+  // 状态过滤器
+  const statuses = [...new Set(state.rows.map(r => r.status).filter(v => v !== undefined))].sort();
+  const sel = document.getElementById("statusFilter");
+  sel.innerHTML = '<option value="">全部状态</option>' +
+    statuses.map(s => `<option value="${escapeAttr(s)}">status=${escapeHtml(s)}</option>`).join("");
+  applyFilter();
+}
+
+/* ============== 过滤 & 列表渲染 ============== */
+function applyFilter() {
+  const q = state.q.trim().toLowerCase();
+  const sf = state.statusFilter;
+  state.filtered = state.rows.map((r, i) => ({ r, i })).filter(({ r }) => {
+    if (sf !== "" && String(r.status) !== sf) return false;
+    if (!q) return true;
+    return Object.values(r).some(v => String(v).toLowerCase().includes(q));
+  });
+  document.getElementById("count").textContent = `${state.filtered.length} / ${state.rows.length}`;
+  renderList();
+}
+
+function isRowDirty(i) {
+  for (const key of state.dirtyCells) if (key.startsWith(i + "::")) return true;
+  return false;
+}
+
+function renderList() {
+  const list = document.getElementById("list");
+  if (!state.filtered.length) {
+    list.innerHTML = '<div class="empty" style="margin-top:40px">没有匹配的记录</div>';
+    return;
+  }
+  const html = state.filtered.map(({ r, i }) => {
+    const url = r.url || "(no url)";
+    const title = highlight(truncate(url, 80), state.q);
+    const subParts = [];
+    if (r.pub_time) subParts.push(`发布 ${escapeHtml(r.pub_time)}`);
+    if (r.time_source) subParts.push(escapeHtml(r.time_source));
+    if (r.result != null) subParts.push(`${(String(r.result).length / 1024).toFixed(1)} KB`);
+    return `<div class="row status-${escapeAttr(r.status ?? '')} ${i === state.activeIdx ? "active" : ""} ${isRowDirty(i) ? "dirty-row" : ""}" data-i="${i}">
+      <div class="title"><span class="status-dot"></span>${title}</div>
+      <div class="sub">${subParts.join(" · ")}</div>
+    </div>`;
+  }).join("");
+  list.innerHTML = html;
+  list.querySelectorAll(".row").forEach(el => {
+    el.addEventListener("click", () => selectRow(+el.dataset.i));
+  });
+}
+
+function selectRow(idx) {
+  state.activeIdx = idx;
+  renderList();
+  renderDetail(idx);
+}
+
+/* ============== 详情渲染（可编辑） ============== */
+function renderDetail(idx) {
+  const r = state.rows[idx];
+  const detail = document.getElementById("detail");
+  const shortFields = state.columns.filter(k => k !== "result");
+  const fieldRows = shortFields.map(k => {
+    const v = r[k] ?? "";
+    const dirty = state.dirtyCells.has(idx + "::" + k);
+    const isUrl = k === "url" && /^https?:/i.test(v);
+    return `
+      <div class="k">
+        <span>${escapeHtml(k)}</span>
+        ${k !== "url_id" && k !== "url" ? `<button class="col-del" data-del-col="${escapeAttr(k)}" title="删除此列">✕</button>` : ""}
+      </div>
+      <div class="v ${dirty ? "dirty" : ""}">
+        <textarea class="cell-input" data-col="${escapeAttr(k)}" rows="1" spellcheck="false">${escapeHtml(v)}</textarea>
+      </div>
+      <div class="actions">
+        ${isUrl ? `<button data-open-url="${escapeAttr(v)}">打开</button>` : ""}
+      </div>
+    `;
+  }).join("");
+
+  const hasResult = state.columns.includes("result");
+  const resultRaw = hasResult ? (r.result ?? "") : "";
+  let parsed = null, parseErr = null;
+  if (resultRaw) {
+    try { parsed = JSON.parse(resultRaw); } catch (e) { parseErr = e.message; }
+  }
+  const resultDirty = state.dirtyCells.has(idx + "::result");
+
+  detail.innerHTML = `
+    <div class="fields">${fieldRows}</div>
+    ${hasResult ? `
+    <div class="result-box ${resultDirty ? "dirty" : ""}">
+      <div class="result-header">
+        <span class="title">result${resultDirty ? " ●" : ""}</span>
+        <span class="info">${resultRaw.length.toLocaleString()} 字符${parsed ? " · JSON" : parseErr ? " · 非 JSON" : ""}</span>
+        <span class="actions">
+          <button data-view="tree" class="${state.view==='tree'?'on':''}">树形</button>
+          <button data-view="raw" class="${state.view==='raw'?'on':''}">原文</button>
+          <button data-view="edit" class="${state.view==='edit'?'on':''}">编辑</button>
+          <button data-act="expand">全展开</button>
+          <button data-act="collapse">全折叠</button>
+          <button data-act="format" title="以 2 空格缩进重新格式化 JSON">美化</button>
+          <button data-act="copy">复制</button>
+        </span>
+      </div>
+      <div id="resultBody"></div>
+    </div>` : ""}
+  `;
+  renderResultBody(idx, parsed, parseErr, resultRaw);
+
+  /* 短字段编辑事件 */
+  detail.querySelectorAll(".cell-input").forEach(t => {
+    autoSize(t);
+    t.addEventListener("input", () => {
+      autoSize(t);
+      const col = t.dataset.col;
+      const original = getOriginalValue(idx, col);
+      const newVal = t.value;
+      r[col] = newVal;
+      const key = idx + "::" + col;
+      if (newVal !== (original ?? "")) state.dirtyCells.add(key);
+      else state.dirtyCells.delete(key);
+      t.parentElement.classList.toggle("dirty", state.dirtyCells.has(key));
+      updateDirtyBadge();
+      // 列表侧的 dirty 圆点
+      const rowEl = document.querySelector(`.row[data-i="${idx}"]`);
+      if (rowEl) rowEl.classList.toggle("dirty-row", isRowDirty(idx));
+    });
+  });
+
+  /* 删除列 */
+  detail.querySelectorAll("[data-del-col]").forEach(b => {
+    b.addEventListener("click", () => {
+      const col = b.dataset.delCol;
+      if (!confirm(`确认删除列「${col}」？该列在所有 ${state.rows.length} 条记录中的值都会被移除（仅影响内存，未保存前可撤销）。`)) return;
+      state.columns = state.columns.filter(c => c !== col);
+      for (const row of state.rows) delete row[col];
+      // 清理该列所有 dirty
+      for (const key of [...state.dirtyCells]) {
+        if (key.endsWith("::" + col)) state.dirtyCells.delete(key);
+      }
+      // 视为一次结构变更，标记为 dirty
+      markStructuralDirty();
+      updateDirtyBadge();
+      renderList();
+      renderDetail(idx);
+      toast(`已删除列：${col}`);
+    });
+  });
+
+  /* result 视图切换 & 动作 */
+  detail.querySelectorAll("[data-view]").forEach(btn => {
+    btn.addEventListener("click", () => { state.view = btn.dataset.view; renderDetail(idx); });
+  });
+  detail.querySelector('[data-act="expand"]')?.addEventListener("click", () => {
+    detail.querySelectorAll(".tree .node.collapsed").forEach(n => n.classList.remove("collapsed"));
+  });
+  detail.querySelector('[data-act="collapse"]')?.addEventListener("click", () => {
+    detail.querySelectorAll(".tree .node").forEach((n, i) => { if (i > 0) n.classList.add("collapsed"); });
+  });
+  detail.querySelector('[data-act="format"]')?.addEventListener("click", () => {
+    try {
+      const pretty = JSON.stringify(JSON.parse(r.result), null, 2);
+      updateCellValue(idx, "result", pretty);
+      renderDetail(idx);
+      toast("已美化 JSON");
+    } catch (e) { toast("JSON 解析失败，无法美化"); }
+  });
+  detail.querySelector('[data-act="copy"]')?.addEventListener("click", () => {
+    navigator.clipboard.writeText(resultRaw).then(() => toast("已复制"));
+  });
+  detail.querySelectorAll("[data-open-url]").forEach(b => {
+    b.addEventListener("click", () => window.open(b.dataset.openUrl, "_blank"));
+  });
+}
+
+function renderResultBody(idx, parsed, parseErr, raw) {
+  const body = document.getElementById("resultBody");
+  if (!body) return;
+  if (state.view === "edit") {
+    body.innerHTML = `<textarea class="raw-editor" id="resultEditor" spellcheck="false"></textarea>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">直接编辑 result 原文；离开输入框自动生效（未保存前可撤销）</div>`;
+    const ed = document.getElementById("resultEditor");
+    ed.value = raw;
+    ed.addEventListener("input", () => {
+      updateCellValue(idx, "result", ed.value, /*reRender*/ false);
+    });
+    return;
+  }
+  if (state.view === "raw" || !parsed) {
+    body.innerHTML = `<pre style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;white-space:pre-wrap;word-break:break-word;max-height:70vh;overflow:auto;font-size:12px;margin:0">${escapeHtml(raw)}</pre>` +
+      (parseErr ? `<div style="color:var(--status-err);font-size:12px;margin-top:6px">JSON 解析失败：${escapeHtml(parseErr)}</div>` : "");
+    return;
+  }
+  body.innerHTML = `<div class="tree">${renderTree(parsed, "", true)}</div>`;
+  body.querySelectorAll(".caret").forEach(c => {
+    c.addEventListener("click", () => c.parentElement.classList.toggle("collapsed"));
+  });
+}
+
+/* 修改单元格并同步 dirty 标记 */
+function updateCellValue(idx, col, newVal, reRender = true) {
+  const row = state.rows[idx];
+  row[col] = newVal;
+  const original = getOriginalValue(idx, col);
+  const key = idx + "::" + col;
+  if (newVal !== (original ?? "")) state.dirtyCells.add(key);
+  else state.dirtyCells.delete(key);
+  updateDirtyBadge();
+  const rowEl = document.querySelector(`.row[data-i="${idx}"]`);
+  if (rowEl) rowEl.classList.toggle("dirty-row", isRowDirty(idx));
+  if (reRender) renderDetail(idx);
+}
+
+function getOriginalValue(idx, col) {
+  if (!state.originalSnapshot) return "";
+  const snap = JSON.parse(state.originalSnapshot);
+  if (!snap.columns.includes(col)) return undefined; // 新增列，无原始值
+  return snap.rows[idx]?.[col];
+}
+
+function markStructuralDirty() {
+  // 结构变化（增/删列）也算 dirty
+  state.dirtyCells.add("__structural__");
+}
+
+/* ============== JSON 树 ============== */
+function renderTree(v, keyLabel, isRoot) {
+  const kh = keyLabel ? `<span class="k">${escapeHtml(keyLabel)}</span>: ` : "";
+  if (v === null) return `<div class="leaf">${kh}<span class="nu">null</span></div>`;
+  const t = typeof v;
+  if (t === "string") {
+    const long = v.length > 200;
+    const content = long
+      ? `<div class="string-long">${escapeHtml(v)}</div>`
+      : `<span class="s">"${escapeHtml(v)}"</span>`;
+    return `<div class="leaf">${kh}${long ? `<span class="summary">(${v.length} 字符)</span><br>` : ""}${content}</div>`;
+  }
+  if (t === "number") return `<div class="leaf">${kh}<span class="n">${v}</span></div>`;
+  if (t === "boolean") return `<div class="leaf">${kh}<span class="b">${v}</span></div>`;
+  if (Array.isArray(v)) {
+    if (!v.length) return `<div class="leaf">${kh}<span class="brace">[]</span></div>`;
+    const collapsed = !isRoot && v.length > 20 ? " collapsed" : "";
+    const children = v.map((x, i) => renderTree(x, String(i), false)).join("");
+    return `<div class="node${collapsed}"><span class="caret"></span>${kh}<span class="brace">[</span><span class="summary">${v.length} 项</span>
+      <div class="children">${children}</div>
+      <span class="brace">]</span></div>`;
+  }
+  if (t === "object") {
+    const keys = Object.keys(v);
+    if (!keys.length) return `<div class="leaf">${kh}<span class="brace">{}</span></div>`;
+    const collapsed = !isRoot && keys.length > 20 ? " collapsed" : "";
+    const children = keys.map(k => renderTree(v[k], k, false)).join("");
+    return `<div class="node${collapsed}"><span class="caret"></span>${kh}<span class="brace">{</span><span class="summary">${keys.length} 键</span>
+      <div class="children">${children}</div>
+      <span class="brace">}</span></div>`;
+  }
+  return `<div class="leaf">${kh}${escapeHtml(String(v))}</div>`;
+}
+
+/* ============== 导出 ============== */
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a);
+  a.click(); setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+
+function exportCSV() {
+  const csv = serializeCSV(state.columns, state.rows);
+  const bom = "\uFEFF"; // Excel 打开 UTF-8 CSV 需要 BOM
+  const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8" });
+  const name = (state.sourceName || "data").replace(/\.(csv|tsv|txt|xlsx)$/i, "") + ".edited.csv";
+  downloadBlob(blob, name);
+  markClean();
+  toast("已导出 CSV：" + name);
+}
+
+async function exportXLSX() {
+  let XLSX;
+  try {
+    toast("加载 XLSX 组件…");
+    XLSX = await loadSheetJS();
+  } catch (e) {
+    if (!confirm("XLSX 组件加载失败（可能没联网）。改为导出 CSV？")) return;
+    return exportCSV();
+  }
+  const aoa = [state.columns, ...state.rows.map(r => state.columns.map(c => r[c] ?? ""))];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // Excel 单元格最大 32767 字符，SheetJS 会自动截断超长内容且不报错
+  const truncatedCells = [];
+  for (const r of state.rows) {
+    for (const c of state.columns) {
+      const v = r[c] ?? "";
+      if (String(v).length > 32767) truncatedCells.push(c);
+    }
+  }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const name = (state.sourceName || "data").replace(/\.(csv|tsv|txt|xlsx)$/i, "") + ".edited.xlsx";
+  downloadBlob(blob, name);
+  markClean();
+  if (truncatedCells.length) {
+    const uniq = [...new Set(truncatedCells)];
+    toast(`已导出 XLSX；⚠ ${uniq.join("、")} 列有超长值被 Excel 截断`);
+  } else {
+    toast("已导出 XLSX：" + name);
+  }
+}
+
+function markClean() {
+  state.dirtyCells.clear();
+  state.originalSnapshot = JSON.stringify({ columns: state.columns, rows: state.rows });
+  updateDirtyBadge();
+  if (state.activeIdx >= 0) renderDetail(state.activeIdx);
+  renderList();
+}
+
+function updateDirtyBadge() {
+  const b = document.getElementById("dirtyBadge");
+  const n = [...state.dirtyCells].filter(k => k !== "__structural__").length;
+  const struct = state.dirtyCells.has("__structural__");
+  if (n === 0 && !struct) b.classList.remove("show");
+  else {
+    b.classList.add("show");
+    b.textContent = `未保存修改：${n} 单元${struct ? " + 结构变更" : ""}`;
+  }
+}
+
+function revert() {
+  if (!state.originalSnapshot) return;
+  if (!state.dirtyCells.size) { toast("没有未保存的修改"); return; }
+  if (!confirm(`将撤销所有未保存修改（${state.dirtyCells.size} 处）。确认？`)) return;
+  const snap = JSON.parse(state.originalSnapshot);
+  state.columns = snap.columns;
+  state.rows = snap.rows;
+  state.dirtyCells.clear();
+  updateDirtyBadge();
+  applyFilter();
+  if (state.activeIdx >= 0 && state.activeIdx < state.rows.length) renderDetail(state.activeIdx);
+  else document.getElementById("detail").innerHTML = '<div class="empty">从左侧选择一条记录查看详情</div>';
+  toast("已撤销全部修改");
+}
+
+/* ============== 新增列 ============== */
+function openAddColumn() {
+  document.getElementById("newColName").value = "";
+  document.getElementById("newColDefault").value = "";
+  document.getElementById("addColModal").classList.add("show");
+  setTimeout(() => document.getElementById("newColName").focus(), 50);
+}
+function confirmAddColumn() {
+  const name = document.getElementById("newColName").value.trim();
+  const def = document.getElementById("newColDefault").value;
+  if (!name) { toast("列名不能为空"); return; }
+  if (state.columns.includes(name)) { toast(`列「${name}」已存在`); return; }
+  state.columns.push(name);
+  for (const r of state.rows) r[name] = def;
+  markStructuralDirty();
+  updateDirtyBadge();
+  document.getElementById("addColModal").classList.remove("show");
+  if (state.activeIdx >= 0) renderDetail(state.activeIdx);
+  toast(`已新增列：${name}`);
+}
+
+/* ============== 工具 ============== */
+function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+function escapeAttr(s) { return escapeHtml(s); }
+function truncate(s, n) { s = String(s ?? ""); return s.length > n ? s.slice(0, n) + "…" : s; }
+function highlight(s, q) {
+  if (!q) return escapeHtml(s);
+  const src = String(s ?? ""); const lower = src.toLowerCase(); const qe = q.toLowerCase();
+  let out = "", last = 0, idx;
+  while ((idx = lower.indexOf(qe, last)) !== -1) {
+    out += escapeHtml(src.slice(last, idx)) + "<mark>" + escapeHtml(src.slice(idx, idx + qe.length)) + "</mark>";
+    last = idx + qe.length;
+  }
+  return out + escapeHtml(src.slice(last));
+}
+function autoSize(t) {
+  t.style.height = "auto";
+  t.style.height = Math.min(t.scrollHeight, 200) + "px";
+}
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+}
+
+/* ============== 事件 ============== */
+document.getElementById("q").addEventListener("input", e => { state.q = e.target.value; applyFilter(); });
+document.getElementById("statusFilter").addEventListener("change", e => { state.statusFilter = e.target.value; applyFilter(); });
+document.getElementById("fileInput").addEventListener("change", async e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (state.dirtyCells.size && !confirm("有未保存修改，加载新文件会丢弃。是否继续？")) return;
+  await loadFile(f);
+  e.target.value = "";  // 允许再次选同一文件
+});
+document.getElementById("addColumnBtn").addEventListener("click", openAddColumn);
+document.getElementById("newColConfirm").addEventListener("click", confirmAddColumn);
+document.getElementById("exportCsvBtn").addEventListener("click", exportCSV);
+document.getElementById("exportXlsxBtn").addEventListener("click", exportXLSX);
+document.getElementById("revertBtn").addEventListener("click", revert);
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => {
+  b.closest(".modal-mask").classList.remove("show");
+}));
+// 拖拽 CSV / XLSX
+window.addEventListener("dragover", e => { e.preventDefault(); });
+window.addEventListener("drop", async e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files?.[0]; if (!f) return;
+  if (state.dirtyCells.size && !confirm("有未保存修改，加载新文件会丢弃。是否继续？")) return;
+  await loadFile(f);
+});
+// 关闭 modal（点遮罩）
+document.getElementById("addColModal").addEventListener("click", e => {
+  if (e.target.id === "addColModal") e.target.classList.remove("show");
+});
+// 提示离开保存
+window.addEventListener("beforeunload", e => {
+  if (state.dirtyCells.size) { e.preventDefault(); e.returnValue = ""; }
+});
+
+/* ============== 启动 ============== */
+if (window.__EMBEDDED_DATA__ && Array.isArray(window.__EMBEDDED_DATA__) && window.__EMBEDDED_DATA__.length) {
+  const cols = Object.keys(window.__EMBEDDED_DATA__[0]);
+  loadData(cols, window.__EMBEDDED_DATA__, "dc2ca8ec-02b9-4e22-8401-1939ca252503.csv");
+} else {
+  document.getElementById("fileMeta").textContent = "拖入或选择 CSV / XLSX 文件开始";
+}
+</script>
+</body>
+</html>

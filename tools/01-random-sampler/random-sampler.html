@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>表格数据随机抽样工具</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f5f7fa; color: #2c3e50; min-height: 100vh; padding: 24px;
+}
+.container { max-width: 1200px; margin: 0 auto; }
+h1 { font-size: 24px; font-weight: 600; margin-bottom: 8px; color: #1a1a2e; }
+.subtitle { color: #666; font-size: 14px; margin-bottom: 24px; }
+.card { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.card-title .badge { font-size: 11px; background: #e8f4fd; color: #1890ff; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+
+textarea {
+  width: 100%; height: 180px; border: 2px dashed #d9d9d9; border-radius: 8px;
+  padding: 16px; font-family: "SF Mono","Fira Code",monospace; font-size: 13px;
+  resize: vertical; transition: border-color .3s; outline: none;
+}
+textarea:focus { border-color: #1890ff; }
+textarea::placeholder { color: #bbb; }
+
+/* File upload — uses a real button, not a label wrapper, to avoid sandbox issues */
+.file-upload-btn {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 12px;
+  padding: 8px 16px; background: #f0f5ff; border: 1px solid #d6e4ff;
+  border-radius: 6px; cursor: pointer; font-size: 13px; color: #1890ff;
+  transition: all .2s; font-family: inherit;
+}
+.file-upload-btn:hover { background: #e6f0ff; }
+
+.config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 768px) { .config-grid { grid-template-columns: 1fr; } }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; color: #555; margin-bottom: 6px; }
+select, input[type="number"] {
+  width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 6px;
+  font-size: 14px; outline: none; transition: border-color .2s; background: #fff;
+}
+select:focus, input[type="number"]:focus { border-color: #1890ff; }
+
+.checkbox-grid { display: flex; flex-wrap: wrap; gap: 8px; max-height: 200px; overflow-y: auto; padding: 4px; }
+.checkbox-item {
+  padding: 6px 12px; border: 1px solid #e8e8e8; border-radius: 6px; font-size: 13px;
+  cursor: pointer; transition: all .2s; user-select: none;
+}
+.checkbox-item:hover { border-color: #1890ff; background: #f0f5ff; }
+.checkbox-item.checked { border-color: #1890ff; background: #e6f0ff; color: #1890ff; }
+.quick-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+.quick-btn { font-size: 12px; padding: 4px 10px; border: 1px solid #d9d9d9; border-radius: 4px; cursor: pointer; background: #fafafa; color: #666; transition: all .2s; }
+.quick-btn:hover { border-color: #1890ff; color: #1890ff; }
+
+.btn-group { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+.btn { padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: #1890ff; color: #fff; }
+.btn-primary:hover { background: #096dd9; }
+.btn-primary:disabled { background: #91caff; cursor: not-allowed; }
+.btn-secondary { background: #fff; color: #555; border: 1px solid #d9d9d9; }
+.btn-secondary:hover { border-color: #1890ff; color: #1890ff; }
+.btn-success { background: #52c41a; color: #fff; }
+.btn-success:hover { background: #389e0d; }
+
+.result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+.stats { display: flex; gap: 16px; font-size: 13px; color: #666; flex-wrap: wrap; }
+.stats span { display: flex; align-items: center; gap: 4px; }
+.stats .num { font-weight: 600; color: #1890ff; }
+.table-wrap { overflow-x: auto; border: 1px solid #f0f0f0; border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { background: #fafafa; padding: 12px 16px; text-align: left; font-weight: 600; border-bottom: 1px solid #f0f0f0; white-space: nowrap; position: sticky; top: 0; }
+tbody td { padding: 10px 16px; border-bottom: 1px solid #f5f5f5; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+tbody tr:hover { background: #f0f8ff; }
+tbody tr:last-child td { border-bottom: none; }
+
+.sep-hint { display: flex; align-items: center; gap: 12px; margin-top: 12px; font-size: 12px; color: #999; }
+.sep-hint .detected { color: #52c41a; font-weight: 500; }
+
+.toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; background: #333; color: #fff; border-radius: 8px; font-size: 14px; opacity: 0; transform: translateY(-10px); transition: all .3s; z-index: 999; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: #52c41a; }
+.toast.error { background: #ff4d4f; }
+
+.mode-switch { display: flex; border: 1px solid #d9d9d9; border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+.mode-option { padding: 10px 16px; font-size: 13px; cursor: pointer; border-right: 1px solid #d9d9d9; transition: all .2s; text-align: center; flex: 1; }
+.mode-option:last-child { border-right: none; }
+.mode-option:hover { background: #f0f5ff; }
+.mode-option.active { background: #1890ff; color: #fff; }
+.dedup-field-wrap { margin-top: 12px; }
+.hidden { display: none !important; }
+
+/* stratified mode config */
+.stratified-wrap {
+  margin-top: 12px; padding: 14px; background: #f0f5ff;
+  border: 1px solid #d6e4ff; border-radius: 8px; display: flex; flex-direction: column; gap: 12px;
+}
+.stratified-row { display: flex; gap: 12px; align-items: flex-end; }
+.stratified-row .form-group { flex: 1; margin-bottom: 0; }
+.stratified-hint { font-size: 12px; color: #1890ff; margin-top: 6px; line-height: 1.6; }
+
+/* ── Filter panel (for pre-sampling filter & metric filter) ── */
+.filter-panel { padding: 16px; background: #fffbe6; border: 1px solid #ffe58f; border-radius: 8px; margin-bottom: 16px; }
+.filter-panel-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.filter-conditions { display: flex; flex-direction: column; gap: 10px; }
+.filter-condition-row { display: flex; align-items: flex-start; gap: 10px; background: #fff; border: 1px solid #ffe58f; border-radius: 6px; padding: 10px 12px; }
+.filter-condition-row select { width: 150px; flex-shrink: 0; padding: 7px 10px; font-size: 13px; }
+.filter-condition-row .filter-mode-sel { width: 90px; flex-shrink: 0; }
+.filter-condition-row .filter-text-input {
+  width: 200px; padding: 7px 10px; font-size: 13px;
+  border: 1px solid #d9d9d9; border-radius: 6px; outline: none;
+}
+.filter-condition-row .filter-text-input:focus { border-color: #faad14; }
+.filter-values-wrap { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; align-items: center; }
+.filter-val-item { padding: 4px 10px; border: 1px solid #d9d9d9; border-radius: 14px; font-size: 12px; cursor: pointer; user-select: none; transition: all .2s; background: #fafafa; color: #555; white-space: nowrap; }
+.filter-val-item:hover { border-color: #faad14; background: #fffbe6; }
+.filter-val-item.checked { border-color: #faad14; background: #ffe58f; color: #613400; font-weight: 500; }
+.filter-values-toolbar {
+  display: flex; gap: 10px; margin-bottom: 4px; flex: 1 1 100%; min-width: 100%;
+}
+.filter-values-toolbar span {
+  font-size: 12px; color: #1890ff; cursor: pointer; user-select: none;
+}
+.filter-values-toolbar span:hover { color: #096dd9; text-decoration: underline; }
+.filter-remove-btn { padding: 4px 8px; font-size: 16px; cursor: pointer; color: #bbb; border: none; background: none; flex-shrink: 0; line-height: 1; transition: color .2s; }
+.filter-remove-btn:hover { color: #ff4d4f; }
+.filter-add-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: #faad14; cursor: pointer; padding: 4px 0; border: none; background: none; margin-top: 8px; font-family: inherit; }
+.filter-add-btn:hover { color: #d48806; }
+.filter-add-btn + .filter-add-btn { margin-left: 12px; }
+
+/* Expression filter row */
+.filter-expr-row {
+  display: flex; align-items: flex-start; gap: 6px;
+  background: #fff; border: 1px solid #ffe58f; border-radius: 6px; padding: 10px 12px;
+}
+.filter-expr-row select { width: auto; min-width: 100px; flex-shrink: 1; padding: 7px 8px; font-size: 13px; }
+.filter-expr-row input[type="number"] { width: 80px; flex-shrink: 0; padding: 7px 8px; font-size: 13px; }
+.filter-expr-row .expr-sep { font-size: 13px; color: #999; line-height: 34px; flex-shrink: 0; }
+
+/* Toggle switch */
+.toggle-wrap { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 13px; }
+.toggle-track {
+  width: 44px; height: 24px; background: #d9d9d9; border-radius: 12px;
+  position: relative; transition: background .2s; flex-shrink: 0;
+}
+.toggle-track.on { background: #1890ff; }
+.toggle-thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 20px; height: 20px; background: #fff; border-radius: 50%;
+  transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
+.toggle-track.on .toggle-thumb { left: 22px; }
+.filter-active-hint { font-size: 12px; color: #d48806; margin-top: 6px; }
+
+/* ── Metric panel ── */
+.metric-config { margin-top: 16px; padding: 16px; background: #fafbfc; border: 1px solid #e8e8e8; border-radius: 8px; }
+.metric-block { border: 1px solid #e8e8e8; border-radius: 8px; padding: 14px; margin-bottom: 12px; background: #fff; }
+.metric-block:last-child { margin-bottom: 0; }
+.metric-block-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #444; }
+.metric-row { display: flex; gap: 12px; align-items: flex-end; }
+.metric-row .form-group { flex: 1; margin-bottom: 0; }
+/* metric filter inside metric block */
+.metric-filter-wrap { margin-top: 10px; padding: 10px 12px; background: #fafafa; border: 1px dashed #d9d9d9; border-radius: 6px; }
+.metric-filter-title { font-size: 12px; color: #888; margin-bottom: 8px; }
+.metric-filter-conditions { display: flex; flex-direction: column; gap: 8px; }
+.metric-filter-condition-row { display: flex; align-items: flex-start; gap: 8px; }
+.metric-filter-condition-row select { width: 140px; flex-shrink: 0; padding: 6px 8px; font-size: 12px; }
+
+/* Metric result */
+.metric-result { margin-top: 16px; padding: 16px; border-radius: 8px; border: 1px solid #e8e8e8; background: #fafbfc; }
+.metric-result-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.metric-bars { display: flex; flex-direction: column; gap: 10px; }
+.metric-bar-row { display: flex; align-items: center; gap: 12px; }
+.metric-bar-label { font-size: 12px; color: #666; width: 80px; flex-shrink: 0; }
+.metric-bar-track { flex: 1; height: 24px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+.metric-bar-fill { height: 100%; border-radius: 4px; transition: width .5s ease; display: flex; align-items: center; padding-left: 8px; font-size: 12px; font-weight: 600; color: #fff; min-width: 40px; }
+.metric-bar-fill.original { background: #1890ff; }
+.metric-bar-fill.sampled { background: #722ed1; }
+.metric-diff { margin-top: 12px; display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.metric-diff-value { font-weight: 700; font-size: 16px; }
+.metric-diff-value.good { color: #52c41a; }
+.metric-diff-value.warn { color: #faad14; }
+.metric-diff-value.bad { color: #ff4d4f; }
+.metric-diff-hint { font-size: 12px; color: #999; }
+.metric-filter-scope { font-size: 11px; color: #999; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📊 表格数据随机抽样工具</h1>
+  <p class="subtitle">粘贴或上传表格数据，按需配置抽样规则，快速获取随机样本</p>
+
+  <!-- Step 1 -->
+  <div class="card">
+    <div class="card-title">① 数据输入 <span class="badge">支持 CSV / TSV / 粘贴</span></div>
+    <textarea id="dataInput" placeholder="在此粘贴表格数据（支持 CSV 逗号分隔、TSV Tab 分隔）&#10;&#10;第一行为表头，例如：&#10;姓名,城市,分数,日期&#10;张三,北京,88,2026-01-15&#10;李四,上海,92,2026-01-16"></textarea>
+    <button class="file-upload-btn" id="fileUploadBtn">📁 上传 CSV / TSV 文件</button>
+    <input type="file" id="fileInput" accept=".csv,.tsv,.txt" style="display:none">
+    <div class="sep-hint">
+      <span>分隔符：</span>
+      <select id="sepSelect" style="width:120px;padding:4px 8px;font-size:12px;">
+        <option value="auto">自动检测</option>
+        <option value=",">逗号 (,)</option>
+        <option value="	">Tab (\t)</option>
+        <option value="|">管道符 (|)</option>
+        <option value=";">分号 (;)</option>
+      </select>
+      <span id="sepDetected"></span>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card" id="configCard" style="opacity:.5;pointer-events:none;">
+    <div class="card-title">② 抽样配置</div>
+
+    <!-- Pre-sampling filter -->
+    <div class="filter-panel">
+      <div class="filter-panel-title">🔍 抽样前筛选 <span class="badge" style="background:#fff7e6;color:#d48806;">可选</span></div>
+      <p style="font-size:12px;color:#999;margin-bottom:10px;">先筛选数据范围，抽样仅在命中行中进行。多个条件取交集（AND）</p>
+      <div class="filter-conditions" id="preFilterConditions"></div>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button class="filter-add-btn" id="preFilterAddBtn">＋ 添加条件（值筛选）</button>
+        <button class="filter-add-btn" id="preFilterAddExprBtn">＋ 添加条件（算式筛选）</button>
+      </div>
+      <div class="filter-active-hint hidden" id="preFilterHint"></div>
+    </div>
+
+    <div class="config-grid">
+      <div>
+        <div class="form-group">
+          <label>抽样模式</label>
+          <div class="mode-switch" id="modeSwitch">
+            <div class="mode-option active" data-mode="full">全量随机</div>
+            <div class="mode-option" data-mode="dedup">按字段去重</div>
+            <div class="mode-option" data-mode="stratified">分层抽样</div>
+          </div>
+          <div class="dedup-field-wrap hidden" id="dedupFieldWrap">
+            <label style="margin-top:8px;">去重字段（联合主键，可自由添加）</label>
+            <div id="dedupFieldsContainer" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">
+              <div class="dedup-field-row" style="display:flex;gap:6px;align-items:center;">
+                <select class="dedupFieldSel" style="flex:1;"></select>
+              </div>
+            </div>
+            <button class="filter-add-btn" id="dedupAddBtn" style="margin-top:6px;">＋ 添加联合字段</button>
+          </div>
+          <!-- Stratified config -->
+          <div class="stratified-wrap hidden" id="stratifiedWrap">
+            <div class="stratified-row">
+              <div class="form-group">
+                <label>第一层字段（如 prompt）</label>
+                <select id="stratL1Field"></select>
+              </div>
+              <div class="form-group">
+                <label>抽取数量</label>
+                <input type="number" id="stratL1Size" min="1" value="100" placeholder="如 100">
+              </div>
+            </div>
+            <div class="stratified-row">
+              <div class="form-group">
+                <label>第二层字段（如 subq）</label>
+                <select id="stratL2Field"></select>
+              </div>
+              <div class="form-group">
+                <label>每个第一层值抽取数量</label>
+                <input type="number" id="stratL2Size" min="1" value="1" placeholder="如 1">
+              </div>
+            </div>
+            <div class="stratified-hint" id="stratHint">
+              逻辑：① 随机抽取 N 个第一层唯一值 → ② 在每个第一层值内，随机抽取 M 个第二层唯一值 → ③ 导出所有命中行（不压缩）
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label id="sampleSizeLabel">抽样数量</label>
+          <input type="number" id="sampleSize" min="1" value="10" placeholder="输入抽样条数">
+          <div id="sampleSizeHint" class="hidden" style="font-size:12px;color:#999;margin-top:4px;">去重模式：填写唯一值个数，实际导出包含该值对应的所有行</div>
+          <div id="sampleSizeStratHint" class="hidden" style="font-size:12px;color:#999;margin-top:4px;">分层模式：数量在上方分层配置中单独设置，此处无效</div>
+          <div class="toggle-wrap" id="postDedupToggle" style="margin-top:12px;">
+            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+            <span>抽样后去重（相同行仅保留第一条）</span>
+          </div>
+          <span id="postDedupCount" class="hidden" style="font-size:12px;color:#52c41a;margin-left:8px;"></span>
+        </div>
+      </div>
+      <div>
+        <div class="form-group">
+          <label>输出字段（勾选要保留的列）</label>
+          <div class="quick-actions">
+            <span class="quick-btn" id="selectAll">全选</span>
+            <span class="quick-btn" id="deselectAll">全不选</span>
+            <span class="quick-btn" id="invertSelect">反选</span>
+          </div>
+          <div class="checkbox-grid" id="fieldCheckboxes"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metric Observation -->
+    <div class="metric-config" id="metricConfig">
+      <div class="card-title" style="font-size:14px;margin-bottom:4px;">📐 代表性观测指标 <span class="badge">可选</span></div>
+      <p style="font-size:12px;color:#999;margin-bottom:14px;">对比抽样前后某字段=某值的占比偏差。可为每个指标单独设置"观测范围筛选"。自由新增，无需使用则留空即可。</p>
+      <div id="metricBlocks"></div>
+      <button class="filter-add-btn" id="metricAddBtn" style="margin-top:8px;">＋ 添加观测指标</button>
+    </div>
+
+    <div class="btn-group" style="margin-top:20px;">
+      <button class="btn btn-primary" id="sampleBtn" disabled onclick="doSample()">🎲 开始抽样</button>
+      <button class="btn btn-secondary" id="resetBtn">🔄 重置</button>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card hidden" id="resultCard">
+    <div class="card-title">③ 抽样结果</div>
+    <div class="result-header">
+      <div class="stats">
+        <span>原始：<span class="num" id="statTotal">0</span> 条</span>
+        <span>筛选后：<span class="num" id="statFiltered">0</span> 条</span>
+        <span>抽样结果：<span class="num" id="statSample">0</span> 条</span>
+        <span>字段：<span class="num" id="statFields">0</span> 个</span>
+      </div>
+      <div class="btn-group" style="margin-top:0;">
+        <button class="btn btn-success" id="copyBtn">📋 复制</button>
+        <button class="btn btn-secondary" id="downloadBtn" onclick="downloadXLSX()">⬇️ 下载 XLSX</button>
+        <button class="btn btn-secondary" id="resampleBtn" onclick="doSample()">🎲 重新抽样</button>
+      </div>
+    </div>
+    <!-- Metric Results (dynamic) -->
+    <div id="metricResults"></div>
+    <div class="table-wrap">
+      <table><thead id="resultHead"></thead><tbody id="resultBody"></tbody></table>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════
+let parsedData = [];
+let headers = [];
+let sampledResult = [];
+let lastSampledRaw = [];  // full-field rows for metric calc
+let lastSamplePool = [];  // pre-filter pool
+let sourceFileName = '';
+let lastSampleConfig = {};
+
+// ══════════════════════════════════════════════
+// Helpers
+// ══════════════════════════════════════════════
+function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escA(s) { return String(s).replace(/"/g,'&quot;'); }
+function showToast(msg, type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+type;
+  setTimeout(()=>t.className='toast',2500);
+}
+
+// ══════════════════════════════════════════════
+// CSV Parse
+// ══════════════════════════════════════════════
+function detectSep(text) {
+  const line = text.split('\n')[0];
+  const c = {'\t':(line.match(/\t/g)||[]).length, ',':(line.match(/,/g)||[]).length,
+             '|':(line.match(/\|/g)||[]).length, ';':(line.match(/;/g)||[]).length};
+  return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0];
+}
+function parseCSV(text, sep) {
+  const rows=[], row_push=(r)=>{ if(r.some(f=>f!=='')) rows.push(r); };
+  let row=[], field='', inQ=false;
+  for (let i=0;i<text.length;i++) {
+    const ch=text[i];
+    if (inQ) {
+      if (ch==='"') { if(text[i+1]==='"'){field+='"';i++;}else inQ=false; }
+      else field+=ch;
+    } else {
+      if (ch==='"') inQ=true;
+      else if (ch===sep) { row.push(field.trim()); field=''; }
+      else if (ch==='\n'||ch==='\r') {
+        if(ch==='\r'&&text[i+1]==='\n')i++;
+        row.push(field.trim()); row_push(row); row=[]; field='';
+      } else field+=ch;
+    }
+  }
+  row.push(field.trim()); row_push(row);
+  return rows;
+}
+
+// ══════════════════════════════════════════════
+// Parse & populate UI
+// ══════════════════════════════════════════════
+function parseData(text, fname) {
+  try {
+    _parseData(text, fname);
+  } catch(e) {
+    showToast('解析失败：' + e.message, 'error');
+    console.error(e);
+  }
+}
+function _parseData(text, fname) {
+  if (!text || !text.trim()) return;
+  const t = text.trim();
+  let sep = document.getElementById('sepSelect').value;
+  if (sep==='auto') {
+    sep = detectSep(t);
+    const nm = {'\t':'Tab',',':'逗号','|':'管道符',';':'分号'};
+    document.getElementById('sepDetected').innerHTML = `<span class="detected">✓ 检测到: ${nm[sep]||sep}</span>`;
+  } else {
+    document.getElementById('sepDetected').innerHTML='';
+  }
+  const rows = parseCSV(t, sep);
+  if (rows.length<2) { showToast('数据不足，至少需要表头+1行','error'); return; }
+
+  headers = rows[0];
+  parsedData = rows.slice(1).map(row=>{ const o={}; headers.forEach((h,i)=>o[h]=row[i]||''); return o; });
+  if (fname) sourceFileName = fname;
+
+  const configCard = document.getElementById('configCard');
+  configCard.style.opacity='1'; configCard.style.pointerEvents='auto';
+  document.getElementById('sampleBtn').disabled=false;
+
+  // Build option html
+  const hOpts = headers.map(h=>`<option value="${escA(h)}">${h}</option>`).join('');
+  window._hOpts = hOpts; // cache
+
+  document.getElementById('stratL1Field').innerHTML = hOpts;
+  document.getElementById('stratL2Field').innerHTML = hOpts;
+  // Cache field opts for dynamic dedup rows
+  window._dedupFieldOpts = hOpts;
+  // Reset & init dedup fields: one row by default
+  document.getElementById('dedupFieldsContainer').innerHTML = '';
+  addDedupFieldRow();
+  const mOpts = '<option value="">— 不使用 —</option>' + hOpts;
+  // Reset metric blocks & results; add 2 default blocks
+  document.getElementById('metricBlocks').innerHTML = '';
+  document.getElementById('metricResults').innerHTML = '';
+  metricBlocks.length = 0;
+  metricSeq = 0;
+  // Pre-create fields options for dynamic block builder
+  window._hOpts = hOpts;
+  // Add 2 initial metric blocks
+  addMetricBlock();
+  addMetricBlock();
+  const fOpts = '<option value="">— 选择字段 —</option>' + hOpts;
+  window._fOpts = fOpts;
+
+  document.getElementById('fieldCheckboxes').innerHTML = headers.map(h=>
+    `<div class="checkbox-item checked" data-field="${escA(h)}">${h}</div>`
+  ).join('');
+
+  const ss = document.getElementById('sampleSize');
+  ss.max=parsedData.length; ss.placeholder=`最大 ${parsedData.length}`;
+
+  // Reset filters
+  document.getElementById('preFilterConditions').innerHTML='';
+  document.getElementById('preFilterHint').classList.add('hidden');
+  document.getElementById('metricBlocks').innerHTML='';
+  document.getElementById('metricResults').innerHTML='';
+  metricBlocks.length = 0;
+  metricSeq = 0;
+  window._hOpts = hOpts;
+  addMetricBlock();
+  addMetricBlock();
+
+  showToast(`解析成功：${parsedData.length} 条 × ${headers.length} 字段`,'success');
+}
+
+// ══════════════════════════════════════════════
+// File upload — triggers hidden input
+// ══════════════════════════════════════════════
+document.getElementById('fileUploadBtn').addEventListener('click', ()=>{
+  document.getElementById('fileInput').click();
+});
+document.getElementById('fileInput').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  const fname = file.name.replace(/\.[^.]+$/,'');
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('dataInput').value = e.target.result;
+    parseData(e.target.result, fname);
+  };
+  reader.readAsText(file);
+  this.value=''; // reset so same file can be re-uploaded
+});
+
+// Paste input
+let parseTimer;
+document.getElementById('dataInput').addEventListener('input', ()=>{
+  clearTimeout(parseTimer);
+  parseTimer = setTimeout(()=>parseData(document.getElementById('dataInput').value, null), 500);
+});
+document.getElementById('sepSelect').addEventListener('change', ()=>{
+  const v = document.getElementById('dataInput').value;
+  if (v) parseData(v, null);
+});
+
+// ══════════════════════════════════════════════
+// Generic filter row builder (for value-type filters)
+// ══════════════════════════════════════════════
+let filterSeq = 0;
+function buildFilterRow(containerId) {
+  filterSeq++;
+  const id = 'fr_' + filterSeq;
+  const row = document.createElement('div');
+  row.className = 'filter-condition-row';
+  row.dataset.id = id;
+  row.innerHTML = `
+    <select class="filter-field-sel" onchange="onFilterFieldChange(this,'${id}','${containerId}')">
+      ${window._fOpts||'<option value="">— 选择字段 —</option>'}
+    </select>
+    <select class="filter-mode-sel" onchange="onFilterModeChange(this,'${id}')">
+      <option value="">— 筛选方式 —</option>
+      <option value="options">按选项</option>
+      <option value="equals">等于</option>
+      <option value="contains">包含</option>
+      <option value="is_empty">为空</option>
+      <option value="is_not_empty">不为空</option>
+    </select>
+    <div class="filter-values-wrap" id="fv_${id}"><span style="font-size:12px;color:#bbb">先选择字段</span></div>
+    <button class="filter-remove-btn" onclick="document.getElementById('${containerId}').querySelector('[data-id=${id}]').remove(); updatePreFilterHint();">✕</button>
+  `;
+  document.getElementById(containerId).appendChild(row);
+}
+
+function onFilterModeChange(sel, id) {
+  const field = sel.closest('.filter-condition-row').querySelector('.filter-field-sel').value;
+  if (field) onFilterFieldChange(sel.closest('.filter-condition-row').querySelector('.filter-field-sel'), id);
+}
+
+function onFilterFieldChange(sel, id, containerId) {
+  const field = sel.value;
+  const row = sel.closest('.filter-condition-row');
+  const mode = row.querySelector('.filter-mode-sel').value;
+  const wrap = document.getElementById('fv_'+id);
+
+  if (!field) { wrap.innerHTML='<span style="font-size:12px;color:#bbb">先选择字段</span>'; return; }
+  if (!mode)  { wrap.innerHTML='<span style="font-size:12px;color:#bbb">请选择筛选方式</span>'; return; }
+
+  if (mode==='is_empty' || mode==='is_not_empty') {
+    wrap.innerHTML = '<span style="font-size:12px;color:#888">无需额外配置</span>';
+    updatePreFilterHint();
+    return;
+  }
+
+  if (mode==='equals' || mode==='contains') {
+    const inputId = 'fvinput_' + id;
+    // Show a datalist-backed input for quick suggestions
+    const counts={};
+    parsedData.forEach(r=>{ const v=r[field]||''; counts[v]=(counts[v]||0)+1; });
+    const sortedVals = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0, 200);
+    const datalistId = 'datalist_' + id;
+    wrap.innerHTML = `
+      <input type="text" id="${inputId}" class="filter-text-input" placeholder="输入值..." oninput="updatePreFilterHint()"
+             list="${datalistId}" autocomplete="off">
+      <datalist id="${datalistId}">
+        ${sortedVals.map(([val,cnt])=>`<option value="${escA(val)}">`).join('')}
+      </datalist>
+    `;
+    updatePreFilterHint();
+    return;
+  }
+
+  // Default: 'options' mode
+  const counts={};
+  parsedData.forEach(r=>{ const v=r[field]||'(空)'; counts[v]=(counts[v]||0)+1; });
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  wrap.innerHTML = `
+    <div class="filter-values-toolbar">
+      <span class="filter-select-all" onclick="event.stopPropagation();selectAllInWrap(this)">全选</span>
+      <span class="filter-select-none" onclick="event.stopPropagation();deselectAllInWrap(this)">取消全选</span>
+    </div>
+    ${sorted.map(([val,cnt])=>
+      `<div class="filter-val-item checked" data-val="${escA(val)}">${val} <span style="opacity:.5">(${cnt})</span></div>`
+    ).join('')}
+  `;
+  updatePreFilterHint();
+}
+
+// Helper functions for select/deselect all within a filter-values-wrap
+function selectAllInWrap(btn) {
+  btn.closest('.filter-values-wrap').querySelectorAll('.filter-val-item').forEach(c=>c.classList.add('checked'));
+  updatePreFilterHint();
+}
+function deselectAllInWrap(btn) {
+  btn.closest('.filter-values-wrap').querySelectorAll('.filter-val-item').forEach(c=>c.classList.remove('checked'));
+  updatePreFilterHint();
+}
+
+// toggle chips inside ANY filter container
+document.addEventListener('click', e=>{
+  const chip = e.target.closest('.filter-val-item');
+  if (!chip) return;
+  chip.classList.toggle('checked');
+  // update pre-filter hint if relevant
+  const row = chip.closest('.filter-condition-row');
+  if (row && row.closest('#preFilterConditions')) updatePreFilterHint();
+});
+
+// ── Pre-filter ──
+document.getElementById('preFilterAddBtn').addEventListener('click', ()=>buildFilterRow('preFilterConditions'));
+document.getElementById('preFilterAddExprBtn').addEventListener('click', buildExprFilterRow);
+
+// Build an expression filter row
+function buildExprFilterRow() {
+  filterSeq++;
+  const id = 'expr_' + filterSeq;
+  const fieldOpts = window._hOpts || '<option value="">—</option>';
+  const row = document.createElement('div');
+  row.className = 'filter-expr-row';
+  row.dataset.id = id;
+  row.innerHTML = `
+    <select class="expr-field-a">${fieldOpts}</select>
+    <select class="expr-op">
+      <option value="+">+</option><option value="-">−</option>
+      <option value="*">×</option><option value="/">÷</option>
+    </select>
+    <select class="expr-field-b">${fieldOpts}</select>
+    <span class="expr-sep">→</span>
+    <select class="expr-cmp">
+      <option value=">">&gt;</option><option value=">=" selected>&gt;=</option>
+      <option value="<">&lt;</option><option value="<=">&lt;=</option>
+      <option value="=">=</option><option value="!=">!=</option>
+    </select>
+    <input type="number" class="expr-threshold" placeholder="阈值" step="any">
+    <button class="filter-remove-btn" onclick="this.closest('.filter-expr-row').remove();updatePreFilterHint();">✕</button>
+  `;
+  document.getElementById('preFilterConditions').appendChild(row);
+  // Trigger hint update on any change within this row
+  row.querySelectorAll('select,input').forEach(el=>{
+    el.addEventListener('change', updatePreFilterHint);
+  });
+}
+function updatePreFilterHint() {
+  const f = getFiltersFrom('preFilterConditions');
+  const hint = document.getElementById('preFilterHint');
+  if (!f.length) { hint.classList.add('hidden'); return; }
+  const modeLabels = { options:'按选项', equals:'等于', contains:'包含', is_empty:'为空', is_not_empty:'不为空' };
+  const parts = f.map(x=>{
+    if (x.type==='expr') return `${x.fieldA} ${x.op} ${x.fieldB} ${x.cmp} ${x.threshold}`;
+    if (x.mode==='is_empty'||x.mode==='is_not_empty') return `${x.field} ${modeLabels[x.mode]}`;
+    if (x.mode==='equals'||x.mode==='contains') return `${x.field} ${modeLabels[x.mode]} "${x.value}"`;
+    return `${x.field} ∈ [${x.values.join(', ')}]`;
+  });
+  hint.textContent = '当前筛选：' + parts.join(' AND ');
+  hint.classList.remove('hidden');
+}
+
+// ── Dynamic dedup field rows ──
+function addDedupFieldRow() {
+  const row = document.createElement('div');
+  row.className = 'dedup-field-row';
+  row.style.cssText = 'display:flex;gap:6px;align-items:center;';
+  row.innerHTML = `
+    <select class="dedupFieldSel" style="flex:1;">${window._dedupFieldOpts||''}</select>
+    <button class="filter-remove-btn" onclick="this.closest('.dedup-field-row').remove();">✕</button>
+  `;
+  document.getElementById('dedupFieldsContainer').appendChild(row);
+}
+function getDedupFields() {
+  return [...document.querySelectorAll('.dedupFieldSel')].map(s => s.value).filter(Boolean);
+}
+document.getElementById('dedupAddBtn').addEventListener('click', addDedupFieldRow);
+
+// ── Metric filters ──
+// Metric blocks are now dynamic — addMetricBlock(idx) builds a config block
+let metricSeq = 0;
+const metricBlocks = []; // { idx, idPrefix } — registry of active metric blocks
+
+function addMetricBlock() {
+  metricSeq++;
+  const idx = metricSeq;
+  const idPrefix = 'm' + idx;
+  const metricBlock = { idx, idPrefix };
+  metricBlocks.push(metricBlock);
+
+  const threshOpts = '<option value="0.01">1%</option><option value="0.02">2%</option><option value="0.05" selected>5%</option><option value="0.1">10%</option><option value="0.15">15%</option><option value="0.2">20%</option>';
+  const mOpts = '<option value="">— 不使用 —</option>' + (window._hOpts || '');
+
+  const block = document.createElement('div');
+  block.className = 'metric-block';
+  block.id = 'metricBlock' + idx;
+  block.innerHTML = `
+    <div class="metric-block-title">
+      <span>指标 ${idx}</span>
+      <button class="filter-remove-btn" onclick="removeMetricBlock(${idx})" style="margin-left:auto;">✕</button>
+    </div>
+    <div class="metric-row">
+      <div class="form-group">
+        <label>观测字段</label>
+        <select id="metricField${idx}">${mOpts}</select>
+      </div>
+      <div class="form-group">
+        <label>等于值</label>
+        <select id="metricValue${idx}"><option value="">— 请先选择字段 —</option></select>
+      </div>
+      <div class="form-group">
+        <label>偏差阈值</label>
+        <select id="metricThreshold${idx}">${threshOpts}</select>
+      </div>
+    </div>
+    <div class="metric-filter-wrap">
+      <div class="metric-filter-title">观测范围筛选（可选）</div>
+      <div class="metric-filter-conditions" id="metricFilter${idx}Conditions"></div>
+      <button class="filter-add-btn" onclick="buildFilterRow('metricFilter${idx}Conditions')">＋ 添加观测范围条件</button>
+    </div>
+  `;
+  document.getElementById('metricBlocks').appendChild(block);
+
+  // Setup field → value listener
+  document.getElementById('metricField' + idx).addEventListener('change', e => {
+    const field = e.target.value;
+    const mv = document.getElementById('metricValue' + idx);
+    if (!field) { mv.innerHTML = '<option value="">— 请先选择字段 —</option>'; return; }
+    const counts = {};
+    parsedData.forEach(r => { const v = r[field] || '(空)'; counts[v] = (counts[v] || 0) + 1; });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    mv.innerHTML = sorted.map(([val, cnt]) =>
+      `<option value="${escA(val)}">${val} (${cnt}条, ${(cnt / parsedData.length * 100).toFixed(1)}%)</option>`
+    ).join('');
+  });
+
+  return metricBlock;
+}
+
+function removeMetricBlock(idx) {
+  // Remove DOM elements
+  const block = document.getElementById('metricBlock' + idx);
+  if (block) block.remove();
+  const result = document.getElementById('metricResult' + idx);
+  if (result) result.remove();
+  // Remove from registry
+  const pos = metricBlocks.findIndex(m => m.idx === idx);
+  if (pos !== -1) metricBlocks.splice(pos, 1);
+}
+
+document.getElementById('metricAddBtn').addEventListener('click', addMetricBlock);
+
+// ══════════════════════════════════════════════
+// Read active filters from a container
+// ══════════════════════════════════════════════
+function getFiltersFrom(containerId) {
+  const filters=[];
+  document.querySelectorAll(`#${containerId} .filter-condition-row`).forEach(row=>{
+    const fieldSel = row.querySelector('.filter-field-sel');
+    if (!fieldSel) return;
+    const field = fieldSel.value;
+    if (!field) return;
+    const mode = row.querySelector('.filter-mode-sel')?.value;
+    if (!mode) return; // skip unconfigured rows
+
+    if (mode==='is_empty') { filters.push({ type:'value', field, mode:'is_empty' }); return; }
+    if (mode==='is_not_empty') { filters.push({ type:'value', field, mode:'is_not_empty' }); return; }
+
+    if (mode==='equals' || mode==='contains') {
+      const input = row.querySelector('.filter-text-input');
+      const val = input?.value?.trim();
+      if (val) filters.push({ type:'value', field, mode, value:val });
+      return;
+    }
+
+    // Default: 'options' mode
+    const vals=[...row.querySelectorAll('.filter-val-item.checked')].map(c=>c.dataset.val);
+    if (vals.length) filters.push({ type:'value', field, mode:'options', values:vals });
+  });
+  // Also collect expression rows
+  document.querySelectorAll(`#${containerId} .filter-expr-row`).forEach(row=>{
+    const fA = row.querySelector('.expr-field-a').value;
+    const op = row.querySelector('.expr-op').value;
+    const fB = row.querySelector('.expr-field-b').value;
+    const cmp = row.querySelector('.expr-cmp').value;
+    const th = parseFloat(row.querySelector('.expr-threshold').value);
+    if (fA && op && fB && cmp && !isNaN(th)) {
+      filters.push({ type:'expr', fieldA:fA, op, fieldB:fB, cmp, threshold:th });
+    }
+  });
+  return filters;
+}
+function applyFiltersTo(data, filters) {
+  if (!filters.length) return data;
+  return data.filter(r=>filters.every(f=>{
+    if (f.type==='expr') {
+      const a = parseFloat(r[f.fieldA]) || 0;
+      const b = parseFloat(r[f.fieldB]) || 0;
+      let val;
+      switch (f.op) {
+        case '+': val = a + b; break;
+        case '-': val = a - b; break;
+        case '*': val = a * b; break;
+        case '/': val = b === 0 ? NaN : a / b; break;
+        default: return true;
+      }
+      if (isNaN(val) || !isFinite(val)) return false;
+      switch (f.cmp) {
+        case '>':  return val >  f.threshold;
+        case '>=': return val >= f.threshold;
+        case '<':  return val <  f.threshold;
+        case '<=': return val <= f.threshold;
+        case '=':  return val === f.threshold;
+        case '!=': return val !== f.threshold;
+        default: return true;
+      }
+    }
+    // Value-type filter
+    const rawVal = r[f.field]||'';
+    switch (f.mode) {
+      case 'is_empty':      return rawVal === '' || rawVal === '(空)';
+      case 'is_not_empty':  return rawVal !== '' && rawVal !== '(空)';
+      case 'equals':        return rawVal === f.value || (rawVal === '' && f.value === '(空)');
+      case 'contains':      return rawVal.toLowerCase().includes(f.value.toLowerCase());
+      default:              return f.values.includes(rawVal||'(空)');
+    }
+  }));
+}
+
+// ══════════════════════════════════════════════
+// Mode switch
+// ══════════════════════════════════════════════
+document.getElementById('modeSwitch').addEventListener('click', e=>{
+  const opt=e.target.closest('.mode-option'); if(!opt) return;
+  document.querySelectorAll('.mode-option').forEach(o=>o.classList.remove('active'));
+  opt.classList.add('active');
+  const mode = opt.dataset.mode;
+  const dedup = mode==='dedup';
+  const strat = mode==='stratified';
+  document.getElementById('dedupFieldWrap').classList.toggle('hidden', !dedup);
+  document.getElementById('stratifiedWrap').classList.toggle('hidden', !strat);
+  document.getElementById('sampleSizeHint').classList.toggle('hidden', !dedup);
+  document.getElementById('sampleSizeStratHint').classList.toggle('hidden', !strat);
+  document.getElementById('sampleSizeLabel').textContent =
+    dedup ? '抽样数量（唯一值个数）' : '抽样数量';
+  document.getElementById('sampleSize').disabled = strat;
+});
+
+// ══════════════════════════════════════════════
+// Output field checkboxes
+// ══════════════════════════════════════════════
+document.getElementById('fieldCheckboxes').addEventListener('click', e=>{
+  const i=e.target.closest('.checkbox-item'); if(i) i.classList.toggle('checked');
+});
+document.getElementById('selectAll').addEventListener('click',()=>
+  document.querySelectorAll('#fieldCheckboxes .checkbox-item').forEach(i=>i.classList.add('checked')));
+document.getElementById('deselectAll').addEventListener('click',()=>
+  document.querySelectorAll('#fieldCheckboxes .checkbox-item').forEach(i=>i.classList.remove('checked')));
+document.getElementById('invertSelect').addEventListener('click',()=>
+  document.querySelectorAll('#fieldCheckboxes .checkbox-item').forEach(i=>i.classList.toggle('checked')));
+
+// Post-sampling dedup toggle
+document.getElementById('postDedupToggle').addEventListener('click', ()=>{
+  document.querySelector('#postDedupToggle .toggle-track').classList.toggle('on');
+});
+
+// ══════════════════════════════════════════════
+// Metric field → value dropdown
+// ══════════════════════════════════════════════
+[1,2].forEach(idx=>{
+  document.getElementById('metricField'+idx).addEventListener('change', e=>{
+    const field=e.target.value;
+    const mv=document.getElementById('metricValue'+idx);
+    if (!field) { mv.innerHTML='<option value="">— 请先选择字段 —</option>'; return; }
+    // Use full parsedData for the value list (independent of pre-filter)
+    const counts={};
+    parsedData.forEach(r=>{ const v=r[field]||'(空)'; counts[v]=(counts[v]||0)+1; });
+    const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    mv.innerHTML=sorted.map(([val,cnt])=>
+      `<option value="${escA(val)}">${val} (${cnt}条, ${(cnt/parsedData.length*100).toFixed(1)}%)</option>`
+    ).join('');
+  });
+});
+
+// ══════════════════════════════════════════════
+// Shuffle
+// ══════════════════════════════════════════════
+function shuffle(arr) {
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+// ══════════════════════════════════════════════
+// Metric computation
+// ══════════════════════════════════════════════
+function computeSingleMetric(idx, sampledRaw, pool) {
+  const mf = document.getElementById('metricField' + idx);
+  const mv = document.getElementById('metricValue' + idx);
+  if (!mf || !mv) return null;
+  const field = mf.value;
+  const value = mv.value;
+  if (!field || !value) return null;
+
+  const threshold = parseFloat(document.getElementById('metricThreshold' + idx).value);
+  const mFilters = getFiltersFrom('metricFilter' + idx + 'Conditions');
+  const origPool = applyFiltersTo(pool, mFilters);
+  const sampPool = applyFiltersTo(sampledRaw, mFilters);
+
+  const origMatch = origPool.filter(r => (r[field] || '(空)') === value).length;
+  const origRatio = origPool.length ? origMatch / origPool.length : 0;
+  const sampMatch = sampPool.filter(r => (r[field] || '(空)') === value).length;
+  const sampRatio = sampPool.length ? sampMatch / sampPool.length : 0;
+  const diff = Math.abs(sampRatio - origRatio);
+
+  // Always recreate result DOM — no reuse to avoid stale structure
+  const old = document.getElementById('metricResult' + idx);
+  if (old) old.remove();
+
+  const resultEl = document.createElement('div');
+  resultEl.className = 'metric-result';
+  resultEl.id = 'metricResult' + idx;
+
+  const scopeDesc = mFilters.length
+    ? `观测范围：${mFilters.map(f => `${f.field} ∈ [${f.values.join(', ')}]`).join(' AND ')}（全集 ${origPool.length} 条 → 抽样对应 ${sampPool.length} 条）`
+    : '';
+  const origLabelText = mFilters.length ? '范围内全集' : '全集数据';
+
+  let diffClass, diffStatus, diffHint;
+  if (diff <= threshold * 0.5) { diffClass = 'good'; diffStatus = '✅ 偏差很小，代表性良好'; diffHint = ''; }
+  else if (diff <= threshold) { diffClass = 'warn'; diffStatus = '⚠️ 接近阈值，可接受'; diffHint = `阈值: ${(threshold * 100).toFixed(0)}%`; }
+  else { diffClass = 'bad'; diffStatus = '❌ 超出阈值，建议重新抽样'; diffHint = `阈值: ${(threshold * 100).toFixed(0)}%，超出 ${((diff - threshold) * 100).toFixed(2)}%`; }
+
+  resultEl.innerHTML = `
+    <div class="metric-result-title">📊 指标 ${idx} <span style="font-weight:400;font-size:12px;color:#666;">${field} = ${value}</span></div>
+    <div class="metric-filter-scope" style="font-size:11px;color:#999;margin-top:4px;">${scopeDesc}</div>
+    <div class="metric-bars" style="margin-top:10px;">
+      <div class="metric-bar-row">
+        <span class="metric-bar-label">${origLabelText}</span>
+        <div class="metric-bar-track"><div class="metric-bar-fill original" style="width:${Math.max(origRatio*100,3)}%">${(origRatio*100).toFixed(1)}%</div></div>
+        <span style="font-size:12px;color:#666;width:80px;text-align:right;">${origMatch}/${origPool.length}</span>
+      </div>
+      <div class="metric-bar-row">
+        <span class="metric-bar-label">抽样结果</span>
+        <div class="metric-bar-track"><div class="metric-bar-fill sampled" style="width:${Math.max(sampRatio*100,3)}%">${(sampRatio*100).toFixed(1)}%</div></div>
+        <span style="font-size:12px;color:#666;width:80px;text-align:right;">${sampMatch}/${sampPool.length}</span>
+      </div>
+    </div>
+    <div class="metric-diff">
+      <span>绝对偏差：</span><span class="metric-diff-value ${diffClass}">${(diff*100).toFixed(2)}%</span>
+      <span>${diffStatus}</span>
+      <span class="metric-diff-hint">${diffHint}</span>
+    </div>
+  `;
+  document.getElementById('metricResults').appendChild(resultEl);
+
+  return { field, value, threshold, mFilters,
+           origMatch, origTotal: origPool.length, origRatio,
+           sampMatch, sampTotal: sampPool.length, sampRatio, diff,
+           status: diffStatus.replace(/[✅⚠️❌]\s*/, '') };
+}
+
+function computeAllMetrics(sampled, pool) {
+  document.getElementById('metricResults').innerHTML = '';
+  const results = [];
+  metricBlocks.forEach(m => {
+    const snap = computeSingleMetric(m.idx, sampled, pool);
+    if (snap) results.push(snap);
+  });
+  return results;
+}
+
+// ══════════════════════════════════════════════
+// Sampling
+// ══════════════════════════════════════════════
+function doSample() {
+  try {
+    _doSample();
+  } catch(e) {
+    showToast('出错了：' + e.message, 'error');
+    console.error(e);
+  }
+}
+function _doSample() {
+  const mode=document.querySelector('.mode-option.active').dataset.mode;
+  const size=parseInt(document.getElementById('sampleSize').value)||10;
+  const selectedFields=[];
+  document.querySelectorAll('#fieldCheckboxes .checkbox-item.checked').forEach(i=>selectedFields.push(i.dataset.field));
+  if (!selectedFields.length) { showToast('请至少选择一个输出字段','error'); return; }
+
+  const preFilters=getFiltersFrom('preFilterConditions');
+  const pool=applyFiltersTo(parsedData, preFilters);
+  if (!pool.length) { showToast('筛选后无数据，请检查条件','error'); return; }
+
+  let sampled;
+  if (mode==='dedup') {
+    const fields = getDedupFields();
+    if (!fields.length) { showToast('请选择至少一个去重字段','error'); return; }
+    const compositeKey = r => fields.map(f => r[f]).join('\0');
+    const uVals = [...new Set(pool.map(compositeKey))];
+    const picked = new Set(shuffle(uVals).slice(0, Math.min(size, uVals.length)));
+    sampled = pool.filter(r => picked.has(compositeKey(r)));
+  } else if (mode==='stratified') {
+    const l1Field = document.getElementById('stratL1Field').value;
+    const l2Field = document.getElementById('stratL2Field').value;
+    const l1Size  = parseInt(document.getElementById('stratL1Size').value)||100;
+    const l2Size  = parseInt(document.getElementById('stratL2Size').value)||1;
+    if (!l1Field || !l2Field) { showToast('请选择分层字段','error'); return; }
+    if (l1Field === l2Field) { showToast('两层字段不能相同','error'); return; }
+
+    // Step 1: pick L1 unique values
+    const l1Vals = [...new Set(pool.map(r=>r[l1Field]))];
+    const pickedL1 = new Set(shuffle(l1Vals).slice(0, Math.min(l1Size, l1Vals.length)));
+
+    // Step 2: for each picked L1 value, pick L2 unique values
+    const pickedPairs = new Set(); // "l1val\0l2val"
+    pickedL1.forEach(l1v => {
+      const l1Rows = pool.filter(r=>r[l1Field]===l1v);
+      const l2Vals = [...new Set(l1Rows.map(r=>r[l2Field]))];
+      shuffle(l2Vals).slice(0, Math.min(l2Size, l2Vals.length))
+        .forEach(l2v => pickedPairs.add(l1v+'\0'+l2v));
+    });
+
+    // Step 3: return ALL original rows matching picked (L1, L2) pairs
+    sampled = pool.filter(r => pickedPairs.has(r[l1Field]+'\0'+r[l2Field]));
+
+    const modeDesc = `分层抽样（L1: ${l1Field}=${pickedL1.size}个, L2: ${l2Field} 每个抽${l2Size}个）`;
+    lastSampleConfig._modeDesc = modeDesc;
+    showToast(`抽取 ${pickedL1.size} 个 ${l1Field}，共 ${pickedPairs.size} 个 ${l2Field}，匹配 ${sampled.length} 行`, 'success');
+  } else {
+    sampled=shuffle(pool).slice(0,Math.min(size,pool.length));
+  }
+
+  lastSampledRaw=[...sampled];
+  lastSamplePool=[...pool];
+
+  // Optional post-sampling dedup
+  const postDedup = document.querySelector('#postDedupToggle .toggle-track').classList.contains('on');
+  if (postDedup && sampled.length > 1) {
+    const seen = new Set();
+    const dedupKey = r => Object.values(r).join('\0');
+    const before = sampled.length;
+    sampled = sampled.filter(r => {
+      const key = dedupKey(r);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    document.getElementById('postDedupCount').textContent = `去重：${before} → ${sampled.length} 行`;
+    document.getElementById('postDedupCount').classList.remove('hidden');
+  } else {
+    document.getElementById('postDedupCount').classList.add('hidden');
+  }
+
+  sampledResult=sampled.map(row=>{ const o={}; selectedFields.forEach(f=>o[f]=row[f]); return o; });
+
+  // Render table
+  document.getElementById('resultHead').innerHTML=`<tr>${selectedFields.map(f=>`<th>${f}</th>`).join('')}</tr>`;
+  document.getElementById('resultBody').innerHTML=sampledResult.map(row=>
+    `<tr>${selectedFields.map(f=>`<td title="${escH(row[f]||'')}">${escH(row[f]||'')}</td>`).join('')}</tr>`
+  ).join('');
+
+  document.getElementById('resultCard').classList.remove('hidden');
+  document.getElementById('resultCard').scrollIntoView({behavior:'smooth',block:'start'});
+  document.getElementById('statTotal').textContent=parsedData.length;
+  document.getElementById('statFiltered').textContent=pool.length===parsedData.length?`${pool.length}（无筛选）`:pool.length;
+  document.getElementById('statSample').textContent=sampledResult.length;
+  document.getElementById('statFields').textContent=selectedFields.length;
+
+  // Metrics — compute all active metric blocks
+  const metricSnaps = computeAllMetrics(sampled, pool);
+
+  // Snapshot for XLSX
+  lastSampleConfig={
+    time: new Date().toLocaleString('zh-CN'),
+    sourceFile: sourceFileName||'（粘贴输入）',
+    totalRows: parsedData.length,
+    filteredRows: pool.length,
+    sampledRows: sampled.length,
+    mode: mode==='dedup' ? `按字段去重（${getDedupFields().join(' + ')}）`
+        : mode==='stratified' ? (lastSampleConfig._modeDesc||'分层抽样')
+        : '全量随机',
+    sampleSize: size,
+    outputFields: selectedFields.join('、'),
+    preFilters,
+    metrics: metricSnaps,
+  };
+
+  if (mode==='dedup') {
+    const fields = getDedupFields();
+    const compositeKey = r => fields.map(f => r[f]).join('\0');
+    const uCount = new Set(sampled.map(compositeKey)).size;
+    showToast(`抽取 ${uCount} 个唯一组合，匹配到 ${sampledResult.length} 条原始数据`,'success');
+  } else if (mode!=='stratified') {
+    // full mode: no extra toast
+  }
+}
+
+document.getElementById('sampleBtn').addEventListener('click',doSample);
+document.getElementById('resampleBtn').addEventListener('click',doSample);
+
+// ══════════════════════════════════════════════
+// Reset
+// ══════════════════════════════════════════════
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  parsedData=[]; headers=[]; sampledResult=[]; lastSampledRaw=[]; sourceFileName='';
+  document.getElementById('dataInput').value='';
+  document.getElementById('configCard').style.opacity='.5';
+  document.getElementById('configCard').style.pointerEvents='none';
+  document.getElementById('sampleBtn').disabled=true;
+  document.getElementById('resultCard').classList.add('hidden');
+  document.getElementById('sepDetected').innerHTML='';
+  document.getElementById('preFilterConditions').innerHTML='';
+  document.getElementById('preFilterHint').classList.add('hidden');
+  document.getElementById('metricBlocks').innerHTML='';
+  document.getElementById('metricResults').innerHTML='';
+  metricBlocks.length = 0;
+  metricSeq = 0;
+  document.getElementById('dedupFieldsContainer').innerHTML = '';
+  showToast('已重置','success');
+});
+
+// ══════════════════════════════════════════════
+// Copy
+// ══════════════════════════════════════════════
+document.getElementById('copyBtn').addEventListener('click',()=>{
+  if (!sampledResult.length) return;
+  const fields=Object.keys(sampledResult[0]);
+  const lines=[fields.join('\t'),
+    ...sampledResult.map(r=>fields.map(f=>(r[f]||'').replace(/[\r\n]+/g,' ')).join('\t'))];
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(()=>showToast('已复制到剪贴板','success'));
+});
+
+// ══════════════════════════════════════════════
+// Download XLSX
+// ══════════════════════════════════════════════
+function buildFilename() {
+  const d=new Date();
+  const ymd=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  const base=(sourceFileName||'data').replace(/[\\/:*?"<>|]/g,'_');
+  return `${base}_sample${sampledResult.length}条_${ymd}.xlsx`;
+}
+
+function downloadXLSX() {
+  try {
+    _downloadXLSX();
+  } catch(e) {
+    showToast('下载失败：' + e.message, 'error');
+    console.error(e);
+  }
+}
+function _downloadXLSX() {
+  if (!sampledResult.length) { showToast('没有可下载的数据','error'); return; }
+  const wb=XLSX.utils.book_new();
+
+  // Sheet1: results
+  const fields=Object.keys(sampledResult[0]);
+  const ws1=XLSX.utils.aoa_to_sheet([fields,...sampledResult.map(r=>fields.map(f=>r[f]||''))]);
+  ws1['!cols']=fields.map((f,ci)=>({wch:Math.min(Math.max(f.length,...sampledResult.map(r=>(r[f]||'').toString().length),8),60)}));
+  XLSX.utils.book_append_sheet(wb,ws1,'抽样结果');
+
+  // Sheet2: config
+  const cfg=lastSampleConfig;
+  const rows=[
+    ['抽样配置与质检报告'],[],
+    ['▌ 基本信息'],
+    ['生成时间',cfg.time],['源文件',cfg.sourceFile],
+    ['原始数据',cfg.totalRows+'条'],['筛选后池',cfg.filteredRows+'条'],['抽样结果',cfg.sampledRows+'条'],
+    ['抽样模式',cfg.mode],['抽样参数',cfg.sampleSize],['输出字段',cfg.outputFields],[],
+    ['▌ 抽样前筛选条件'],
+  ];
+  if (!cfg.preFilters||!cfg.preFilters.length) rows.push(['（无）']);
+  else {
+    const modeLabels = { options:'按选项', equals:'等于', contains:'包含', is_empty:'为空', is_not_empty:'不为空' };
+    rows.push(['类型','筛选方式','条件']);
+    cfg.preFilters.forEach(f=>{
+      if (f.type==='expr') {
+        rows.push(['算式筛选', '', `${f.fieldA} ${f.op==='*'?'×':f.op==='/'?'÷':f.op} ${f.fieldB} ${f.cmp} ${f.threshold}`]);
+      } else {
+        const modeLabel = modeLabels[f.mode]||'按选项';
+        if (f.mode==='is_empty'||f.mode==='is_not_empty') {
+          rows.push(['值筛选', modeLabel, `${f.field} ${modeLabel}`]);
+        } else if (f.mode==='equals'||f.mode==='contains') {
+          rows.push(['值筛选', modeLabel, `${f.field} ${modeLabel} "${f.value}"`]);
+        } else {
+          rows.push(['值筛选', '按选项', `${f.field} ∈ [${f.values.join('、')}]`]);
+        }
+      }
+    });
+  }
+  rows.push([]);
+  rows.push(['▌ 代表性观测指标']);
+  if (!cfg.metrics||!cfg.metrics.length) rows.push(['（未设置）']);
+  else {
+    rows.push(['指标','字段','观测值','偏差阈值','观测范围',
+               '全集命中','全集总数','全集占比','抽样命中','抽样总数','抽样占比','偏差','评估']);
+    cfg.metrics.forEach((m,i)=>{
+      const scopeDesc=m.mFilters&&m.mFilters.length?m.mFilters.map(f=>`${f.field}∈[${f.values.join(',')}]`).join('&'):'全量';
+      rows.push([`指标${i+1}`,m.field,m.value,`${(m.threshold*100).toFixed(0)}%`,scopeDesc,
+                 m.origMatch,m.origTotal,`${(m.origRatio*100).toFixed(2)}%`,
+                 m.sampMatch,m.sampTotal,`${(m.sampRatio*100).toFixed(2)}%`,
+                 `${(m.diff*100).toFixed(2)}%`,m.status]);
+    });
+  }
+  const ws2=XLSX.utils.aoa_to_sheet(rows);
+  ws2['!cols']=[{wch:18},{wch:30},{wch:14},{wch:30},{wch:30},{wch:10},{wch:10},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:16}];
+  ws2['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}}];
+  XLSX.utils.book_append_sheet(wb,ws2,'抽样配置');
+
+  // Use base64 data-URI which is most portable across sandboxes
+  const fname=buildFilename();
+  const wbout = XLSX.write(wb, { bookType:'xlsx', type:'base64' });
+  const dataUri = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + wbout;
+  const a = document.createElement('a');
+  a.href = dataUri; a.download = fname;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ document.body.removeChild(a); }, 500);
+  showToast(`已下载：${fname}`,'success');
+}
+</script>
+</body>
+</html>

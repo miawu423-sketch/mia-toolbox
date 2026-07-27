@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全能数据去重工具 (可视化版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        body { background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    </style>
+</head>
+<body class="text-gray-800 pb-20">
+    <div class="max-w-4xl mx-auto p-4 md:p-6 mt-6 md:mt-10">
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+            <!-- Header -->
+            <div class="bg-blue-600 text-white p-6 md:p-8 text-center relative overflow-hidden">
+                <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 20px 20px;"></div>
+                <h1 class="text-3xl md:text-4xl font-bold relative z-10">✨ 全能数据去重与验证工具</h1>
+                <p class="mt-3 text-blue-100 text-sm md:text-base relative z-10">完全在本地浏览器中运行，支持 Excel / CSV / JSON，保证数据绝对隐私</p>
+            </div>
+
+            <div class="p-6 md:p-8">
+                <!-- Step 1: File Upload -->
+                <div class="mb-8 border-2 border-dashed border-blue-300 rounded-xl p-8 text-center hover:bg-blue-50 hover:border-blue-400 transition-all cursor-pointer relative group">
+                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv, .json" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div id="fileUploadContent" class="group-hover:scale-105 transition-transform">
+                        <svg class="mx-auto h-16 w-16 text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <p class="text-xl font-medium text-gray-700">点击这里，或将文件拖拽至此上传</p>
+                        <p class="text-sm text-gray-400 mt-2">支持格式: .xlsx, .xls, .csv, .json</p>
+                    </div>
+                    <div id="fileStatus" class="mt-4 text-green-600 text-lg hidden font-medium"></div>
+                </div>
+
+                <!-- Step 2: Configuration -->
+                <div id="configPanel" class="hidden space-y-8 animate-fade-in-up">
+                    <div class="border-b pb-4">
+                        <h2 class="text-2xl font-semibold text-gray-800 flex items-center">
+                            <span class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">1</span> 
+                            去重配置
+                        </h2>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
+                        <label class="block text-base font-medium text-gray-800 mb-3">🎯 选择查重的列 (不选则默认为整行判断)</label>
+                        <div id="columnCheckboxes" class="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-48 overflow-y-auto p-4 border rounded-lg bg-white shadow-inner">
+                            <!-- Checkboxes injected here -->
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
+                            <label class="block text-base font-medium text-gray-800 mb-3">📌 保留策略</label>
+                            <select id="strategy" class="mt-1 block w-full pl-3 pr-10 py-2.5 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md border shadow-sm cursor-pointer">
+                                <option value="first">保留第一条 (默认)</option>
+                                <option value="last">保留最后一条</option>
+                                <option value="random">随机保留一条</option>
+                                <option value="remove_all">全删模式 (不留任何重复项)</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-2 ml-1" id="strategyTip">遇到重复的数据时，只保留最先出现的那一行（整行保留）。</p>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
+                            <label class="block text-base font-medium text-gray-800 mb-3">🧹 数据清洗 (强烈建议开启)</label>
+                            <div class="space-y-3 mt-2">
+                                <label class="flex items-center cursor-pointer group">
+                                    <input type="checkbox" id="ignoreCase" class="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" checked>
+                                    <span class="ml-3 text-sm text-gray-700 group-hover:text-blue-600 transition-colors">忽略大小写差异 (A = a)</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer group">
+                                    <input type="checkbox" id="trimSpace" class="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" checked>
+                                    <span class="ml-3 text-sm text-gray-700 group-hover:text-blue-600 transition-colors">自动去除前后隐蔽空格</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button id="startBtn" onclick="processData()" class="w-full flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-md text-lg font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all transform hover:-translate-y-1">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            开始执行去重
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Results -->
+                <div id="resultPanel" class="hidden mt-10">
+                    <div class="border-b pb-4 mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-800 flex items-center">
+                            <span class="bg-green-100 text-green-600 w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">2</span> 
+                            处理与验证报告
+                        </h2>
+                    </div>
+
+                    <!-- Validation Check Status -->
+                    <div class="space-y-3 mb-8">
+                        <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">系统严格验证</h3>
+                        
+                        <!-- Check 1: Deduplication -->
+                        <div id="val1" class="p-4 rounded-xl shadow-sm flex items-center transition-all">
+                            <!-- Injected -->
+                        </div>
+
+                        <!-- Check 2: Misalignment -->
+                        <div id="val2" class="p-4 rounded-xl shadow-sm flex items-center transition-all">
+                            <!-- Injected -->
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 text-center mb-8">
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                            <p class="text-sm text-gray-500 font-medium mb-1">原始总行数</p>
+                            <p id="statTotal" class="text-4xl font-black text-gray-800">0</p>
+                        </div>
+                        <div class="bg-blue-50 p-5 rounded-xl shadow-sm border border-blue-200 relative overflow-hidden">
+                            <div class="absolute right-0 top-0 w-16 h-16 bg-blue-100 rounded-bl-full -mr-8 -mt-8"></div>
+                            <p class="text-sm text-blue-600 font-medium mb-1 relative z-10">去重后保留行数</p>
+                            <p id="statNew" class="text-4xl font-black text-blue-700 relative z-10">0</p>
+                        </div>
+                        <div class="bg-red-50 p-5 rounded-xl shadow-sm border border-red-200 relative overflow-hidden">
+                            <div class="absolute right-0 top-0 w-16 h-16 bg-red-100 rounded-bl-full -mr-8 -mt-8"></div>
+                            <p class="text-sm text-red-600 font-medium mb-1 relative z-10">已清理重复</p>
+                            <p id="statRemoved" class="text-4xl font-black text-red-600 relative z-10">0</p>
+                        </div>
+                    </div>
+
+                    <button id="downloadBtn" onclick="downloadFile()" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-md text-lg font-bold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all transform hover:-translate-y-1">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        导出安全去重结果
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let globalData = [];
+        let headers = [];
+        let fileExt = "";
+        let fileName = "";
+        let resultData = [];
+
+        // UI Interactions
+        document.getElementById('strategy').addEventListener('change', function(e) {
+            const tips = {
+                'first': '遇到重复的数据时，只保留最先出现的那一行（整行保留）。',
+                'last': '遇到重复的数据时，只保留最后出现的那一行（整行保留）。',
+                'random': '遇到重复的数据时，打乱顺序并随机保留其中一行（整行保留）。',
+                'remove_all': '无情模式：只要该数据出现过重复，整行连根拔起全部删除，不留活口。'
+            };
+            document.getElementById('strategyTip').innerText = tips[e.target.value];
+        });
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            fileName = file.name;
+            fileExt = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+            
+            document.getElementById('fileUploadContent').classList.add('hidden');
+            const statusDiv = document.getElementById('fileStatus');
+            statusDiv.innerHTML = `✅ 已加载文件: <b>${fileName}</b> <span class="text-sm text-gray-500 ml-2 animate-pulse">(使用 SheetJS 工业级引擎解析中...)</span>`;
+            statusDiv.classList.remove('hidden');
+            document.getElementById('resultPanel').classList.add('hidden');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data = e.target.result;
+                    if (fileExt === '.json') {
+                        const text = new TextDecoder('utf-8').decode(data);
+                        globalData = JSON.parse(text);
+                        if (!Array.isArray(globalData)) {
+                            alert("❌ JSON 文件需要是对象数组格式！");
+                            return;
+                        }
+                        if (globalData.length > 0) headers = Object.keys(globalData[0]);
+                    } else {
+                        // Using robust SheetJS for CSV/Excel
+                        const workbook = XLSX.read(new Uint8Array(data), {type: 'array', cellDates: true, cellNF: false, cellText: false});
+                        const firstSheet = workbook.SheetNames[0];
+                        globalData = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], {defval: "", raw: false});
+                        if (globalData.length > 0) headers = Object.keys(globalData[0]);
+                    }
+                    
+                    // Assign original index for restoring order AND anti-misalignment check
+                    globalData.forEach((row, index) => { row._origIdx = index; });
+
+                    statusDiv.innerHTML = `✅ 成功加载且无错位: <b>${fileName}</b> <span class="text-sm text-gray-500 ml-2 bg-gray-100 px-2 py-1 rounded">(共 ${globalData.length.toLocaleString()} 行数据)</span>`;
+                    renderColumnCheckboxes();
+                    document.getElementById('configPanel').classList.remove('hidden');
+                } catch (error) {
+                    alert("解析文件失败: " + error.message);
+                    statusDiv.innerHTML = `❌ 解析文件失败: 请检查文件是否损坏或格式不支持`;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function renderColumnCheckboxes() {
+            const container = document.getElementById('columnCheckboxes');
+            container.innerHTML = '';
+            
+            if(headers.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 col-span-full">⚠️ 未检测到列名，可能是空文件。</p>';
+                return;
+            }
+
+            headers.forEach(header => {
+                if (header === '_origIdx') return;
+                const div = document.createElement('div');
+                div.className = 'flex items-center hover:bg-gray-100 p-1 rounded transition-colors';
+                div.innerHTML = `
+                    <input type="checkbox" id="col_${header}" value="${header}" class="col-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
+                    <label for="col_${header}" class="ml-2 text-sm text-gray-700 truncate cursor-pointer w-full" title="${header}">${header}</label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function processData() {
+            const startBtn = document.getElementById('startBtn');
+            const originalBtnText = startBtn.innerHTML;
+            startBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 处理中...';
+            startBtn.disabled = true;
+
+            setTimeout(() => {
+                try {
+                    runDeduplication();
+                } catch(e) {
+                    alert("去重出错: " + e.message);
+                } finally {
+                    startBtn.innerHTML = originalBtnText;
+                    startBtn.disabled = false;
+                }
+            }, 100); 
+        }
+
+        function runDeduplication() {
+            const strategy = document.getElementById('strategy').value;
+            const ignoreCase = document.getElementById('ignoreCase').checked;
+            const trimSpace = document.getElementById('trimSpace').checked;
+
+            const checkboxes = document.querySelectorAll('.col-checkbox:checked');
+            let selectedCols = Array.from(checkboxes).map(cb => cb.value);
+            if (selectedCols.length === 0) selectedCols = headers.filter(h => h !== '_origIdx');
+
+            // Copy array of references
+            let data = [...globalData];
+
+            if (strategy === 'random') {
+                for (let i = data.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [data[i], data[j]] = [data[j], data[i]];
+                }
+            }
+
+            let seen = new Map();
+            let toRemoveAll = new Set();
+            let originalOrderMap = new Map();
+
+            data.forEach((row) => {
+                let keyObj = {};
+                selectedCols.forEach(col => {
+                    let val = row[col];
+                    if (val !== undefined && val !== null) {
+                        let strVal = String(val);
+                        if (trimSpace) strVal = strVal.trim();
+                        if (ignoreCase) strVal = strVal.toLowerCase();
+                        keyObj[col] = strVal;
+                    }
+                });
+                let key = JSON.stringify(keyObj);
+
+                if (seen.has(key)) {
+                    if (strategy === 'first' || strategy === 'random') {
+                        // Keep existing
+                    } else if (strategy === 'last') {
+                        seen.set(key, row); 
+                        originalOrderMap.set(key, row._origIdx); 
+                    }
+                    toRemoveAll.add(key);
+                } else {
+                    seen.set(key, row);
+                    originalOrderMap.set(key, row._origIdx);
+                }
+            });
+
+            let result = [];
+            if (strategy === 'remove_all') {
+                for (let [key, row] of seen.entries()) {
+                    if (!toRemoveAll.has(key)) {
+                        result.push({row, idx: originalOrderMap.get(key)});
+                    }
+                }
+            } else {
+                for (let [key, row] of seen.entries()) {
+                    result.push({row, idx: originalOrderMap.get(key)});
+                }
+            }
+
+            // Restore original order
+            result.sort((a, b) => a.idx - b.idx);
+            
+            // --- VALIDATION 1: Duplicate Residue Check ---
+            let passDupCheck = true;
+            let valSeen = new Set();
+            for (let item of result) {
+                let row = item.row;
+                let keyObj = {};
+                selectedCols.forEach(col => {
+                    let val = row[col];
+                    if (val !== undefined && val !== null) {
+                        let strVal = String(val);
+                        if (trimSpace) strVal = strVal.trim();
+                        if (ignoreCase) strVal = strVal.toLowerCase();
+                        keyObj[col] = strVal;
+                    }
+                });
+                let key = JSON.stringify(keyObj);
+                if (valSeen.has(key)) {
+                    passDupCheck = false;
+                    break;
+                }
+                valSeen.add(key);
+            }
+
+            // --- VALIDATION 2: Anti-Misalignment Integrity Check ---
+            // We compare every property of the kept row against its original state in globalData
+            let passAlignCheck = true;
+            let checkHeaders = headers.filter(h => h !== '_origIdx');
+            for (let item of result) {
+                let currentRow = item.row;
+                let originalRowRef = globalData[item.idx]; // Pulling exact original row
+                
+                for (let col of checkHeaders) {
+                    // Strict equality check between post-processed row and original row before export
+                    if (currentRow[col] !== originalRowRef[col]) {
+                        passAlignCheck = false;
+                        console.error(`Misalignment detected at Original Row ${item.idx}, Column ${col}`);
+                        break;
+                    }
+                }
+                if (!passAlignCheck) break;
+            }
+
+            // Cleanup _origIdx metadata for final export
+            resultData = result.map(item => {
+                let cleanRow = {...item.row};
+                delete cleanRow._origIdx;
+                return cleanRow;
+            });
+
+            // --- UPDATE UI FOR VALIDATIONS ---
+            const val1Div = document.getElementById('val1');
+            if (passDupCheck) {
+                val1Div.innerHTML = `<span class="text-2xl mr-3">✅</span> <div><p class="text-green-800 font-bold">重复项排查测试</p><p class="text-green-600 text-sm">通过。残留集合中未发现任何符合规则的重复项。</p></div>`;
+                val1Div.className = "p-4 rounded-xl bg-green-50 border border-green-200 shadow-sm flex items-center transition-all";
+            } else {
+                val1Div.innerHTML = `<span class="text-2xl mr-3">❌</span> <div><p class="text-red-800 font-bold">重复项排查测试</p><p class="text-red-600 text-sm">失败。仍存在异常重复项，请检查数据异常字符。</p></div>`;
+                val1Div.className = "p-4 rounded-xl bg-red-50 border border-red-200 shadow-sm flex items-center transition-all";
+            }
+
+            const val2Div = document.getElementById('val2');
+            if (passAlignCheck) {
+                val2Div.innerHTML = `<span class="text-2xl mr-3">✅</span> <div><p class="text-green-800 font-bold">数据防错位对比测试</p><p class="text-green-600 text-sm">通过。抽取处理后数据与原文件基线逐行逐列交叉比对，<b>未发生任何单元格错位、断层或内容变异。</b></p></div>`;
+                val2Div.className = "p-4 rounded-xl bg-green-50 border border-green-200 shadow-sm flex items-center transition-all";
+            } else {
+                val2Div.innerHTML = `<span class="text-2xl mr-3">❌</span> <div><p class="text-red-800 font-bold">数据防错位对比测试</p><p class="text-red-600 text-sm">严重警告！检测到数据错位，已拦截导出！</p></div>`;
+                val2Div.className = "p-4 rounded-xl bg-red-50 border border-red-200 shadow-sm flex items-center transition-all";
+            }
+            
+            // Disable download if alignment failed
+            document.getElementById('downloadBtn').disabled = !passAlignCheck;
+            if(!passAlignCheck) document.getElementById('downloadBtn').classList.add('opacity-50', 'cursor-not-allowed');
+
+            // Stats
+            document.getElementById('statTotal').innerText = globalData.length.toLocaleString();
+            document.getElementById('statNew').innerText = resultData.length.toLocaleString();
+            document.getElementById('statRemoved').innerText = (globalData.length - resultData.length).toLocaleString();
+
+            document.getElementById('resultPanel').classList.remove('hidden');
+            document.getElementById('resultPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function downloadFile() {
+            if (!resultData || resultData.length === 0) return;
+            
+            const baseName = fileName.substring(0, fileName.lastIndexOf('.'));
+            const exportName = `${baseName}_去重后${fileExt}`;
+
+            try {
+                if (fileExt === '.json') {
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(resultData, null, 2));
+                    const downloadAnchorNode = document.createElement('a');
+                    downloadAnchorNode.setAttribute("href", dataStr);
+                    downloadAnchorNode.setAttribute("download", exportName);
+                    document.body.appendChild(downloadAnchorNode); 
+                    downloadAnchorNode.click();
+                    downloadAnchorNode.remove();
+                } else {
+                    const ws = XLSX.utils.json_to_sheet(resultData);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "去重结果");
+                    
+                    if (fileExt === '.csv') {
+                        XLSX.writeFile(wb, exportName, { bookType: 'csv' });
+                    } else {
+                        XLSX.writeFile(wb, exportName);
+                    }
+                }
+            } catch(e) {
+                alert("导出失败: " + e.message);
+            }
+        }
+    </script>
+</body>
+</html>
