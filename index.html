@@ -399,7 +399,7 @@
     <div class="hero-right">
       <div class="stats">
         <span class="pill">5 个工具</span>
-        <span class="pill">v1.1.0</span>
+        <span class="pill">v1.1.1</span>
       </div>
       <button class="btn-sticky" onclick="openStickyNote()">📝 工具箱更新日志</button>
     </div>
@@ -526,8 +526,9 @@ const TOOLS = [
     ],
   },
   {
-    url: 'https://github.com/miawu423-sketch/web-ocr-copy',
+    url: 'https://github.com/miawu423-sketch/web-ocr-copy#readme',
     repo: 'https://github.com/miawu423-sketch/web-ocr-copy',
+    download: 'https://github.com/miawu423-sketch/web-ocr-copy/archive/refs/heads/main.zip',
     isExtension: true,
     icon: '📸',
     name: '网页内容复制工具',
@@ -547,6 +548,14 @@ const TOOLS = [
 
 /* ============ 工具箱整体更新日志 ============ */
 const TOOLBOX_CHANGELOG = [
+  {
+    ver: 'v1.1.1',
+    date: '2026-07-28',
+    items: [
+      '⬇ 网页内容复制工具卡片新增「下载最新版」按钮，一键下载 zip（永远指向 main 最新代码）',
+      '📖 保留「安装说明」按钮跳转仓库 README，同事下载后可直接看安装步骤',
+    ],
+  },
   {
     ver: 'v1.1.0',
     date: '2026-07-28',
@@ -613,8 +622,12 @@ TOOLS.forEach((t, idx) => {
     </div>
 
     <div class="card-actions">
-      <a class="btn btn-primary" href="${t.url}" target="_blank" rel="noopener">${t.isExtension ? '查看 & 下载 ↗' : '打开工具 ↗'}</a>
-      <a class="btn" href="${t.repo}" target="_blank" rel="noopener" title="GitHub 仓库">源码</a>
+      ${t.isExtension
+        ? `<a class="btn btn-primary" href="${t.download}" title="下载 main 分支最新代码打包成 zip">⬇ 下载最新版</a>
+           <a class="btn" href="${t.url}" target="_blank" rel="noopener">📖 安装说明</a>`
+        : `<a class="btn btn-primary" href="${t.url}" target="_blank" rel="noopener">打开工具 ↗</a>
+           <a class="btn" href="${t.repo}" target="_blank" rel="noopener" title="GitHub 仓库">源码</a>`
+      }
       <button class="btn" onclick="toggleChangelog(this)">更新日志</button>
     </div>
 
