@@ -398,8 +398,8 @@
     </div>
     <div class="hero-right">
       <div class="stats">
-        <span class="pill">4 个工具</span>
-        <span class="pill">v1.0.2</span>
+        <span class="pill">5 个工具</span>
+        <span class="pill">v1.1.0</span>
       </div>
       <button class="btn-sticky" onclick="openStickyNote()">📝 工具箱更新日志</button>
     </div>
@@ -439,7 +439,7 @@
   <div class="grid" id="grid"></div>
 
   <footer>
-    Made by Mia · 建议同事本地保存整个文件夹，双击 <code>index.html</code> 直接使用 · 有 bug / 建议欢迎反馈
+    Made by Mia · 收藏本页 URL 即可，每个工具独立仓库、独立迭代 · 有 bug / 建议欢迎反馈
   </footer>
 </div>
 
@@ -457,8 +457,8 @@
 /* ============ 数据：4 个工具 ============ */
 const TOOLS = [
   {
-    id: '01-random-sampler',
-    file: 'random-sampler.html',
+    url: 'https://miawu423-sketch.github.io/random-sampler/random-sampler.html',
+    repo: 'https://github.com/miawu423-sketch/random-sampler',
     icon: '🎲',
     name: '随机抽样',
     version: 'v1.1',
@@ -475,8 +475,8 @@ const TOOLS = [
     ],
   },
   {
-    id: '02-dedup',
-    file: 'dedup.html',
+    url: 'https://miawu423-sketch.github.io/dedup-tool/',
+    repo: 'https://github.com/miawu423-sketch/dedup-tool',
     icon: '✨',
     name: '表格数据去重工具',
     version: 'v1.0',
@@ -492,8 +492,8 @@ const TOOLS = [
     ],
   },
   {
-    id: '03-url-codec',
-    file: 'url-codec.html',
+    url: 'https://miawu423-sketch.github.io/url-encoder-tool/',
+    repo: 'https://github.com/miawu423-sketch/url-encoder-tool',
     icon: '🔗',
     name: 'URL encode/decode',
     version: 'v1.0',
@@ -509,8 +509,8 @@ const TOOLS = [
     ],
   },
   {
-    id: '04-table-viewer',
-    file: 'table-viewer.html',
+    url: 'https://miawu423-sketch.github.io/long-cell-viewer/',
+    repo: 'https://github.com/miawu423-sketch/long-cell-viewer',
     icon: '📋',
     name: '长表格查看器',
     version: 'v1.0',
@@ -525,10 +525,39 @@ const TOOLS = [
       { ver: 'v1.0', date: '2026-07', desc: '首个版本：树形查看 / 新增列 / 撤销 / 导出' },
     ],
   },
+  {
+    url: 'https://github.com/miawu423-sketch/web-ocr-copy',
+    repo: 'https://github.com/miawu423-sketch/web-ocr-copy',
+    isExtension: true,
+    icon: '📸',
+    name: '网页内容复制工具',
+    version: 'v1.0',
+    desc: 'Chrome 扩展。对付那些"复制不动"的网页——正文、图片文字（OCR）、SVG、跨 iframe 内容都能一键抓走。',
+    scenarios: [
+      '受限网页复制正文（禁用右键 / 反爬 / 富文本 SVG）',
+      '截图/表情包/PDF 页面里的文字，用 OCR 提取（中英识别）',
+      '想批量抓一个页面所有可见文本做后续处理',
+    ],
+    tags: ['Chrome 扩展', 'OCR 中英', '本地识别', '快捷键唤起'],
+    changelog: [
+      { ver: 'v1.0', date: '2026-07', desc: '首个版本：正文抓取 / OCR (tesseract.js) / 快捷键 / SVG 支持' },
+    ],
+  },
 ];
 
 /* ============ 工具箱整体更新日志 ============ */
 const TOOLBOX_CHANGELOG = [
+  {
+    ver: 'v1.1.0',
+    date: '2026-07-28',
+    items: [
+      '🏗️ 架构升级：每个工具拆到独立 GitHub 仓库，独立迭代、独立版本号',
+      '🌐 门户改为纯"导航入口"，卡片跳转到各工具自己的 GitHub Pages URL',
+      '➕ 新增工具「网页内容复制」（Chrome 扩展，含 OCR）',
+      '📦 门户仓库瘦身：tools/ 目录不再存放工具源码，只保留 index.html + README',
+      '🔗 每张卡片新增「源码」按钮，直接跳到对应工具的 GitHub 仓库',
+    ],
+  },
   {
     ver: 'v1.0.2',
     date: '2026-07-27',
@@ -584,7 +613,8 @@ TOOLS.forEach((t, idx) => {
     </div>
 
     <div class="card-actions">
-      <a class="btn btn-primary" href="tools/${t.id}/${t.file}" target="_blank" rel="noopener">打开工具 ↗</a>
+      <a class="btn btn-primary" href="${t.url}" target="_blank" rel="noopener">${t.isExtension ? '查看 & 下载 ↗' : '打开工具 ↗'}</a>
+      <a class="btn" href="${t.repo}" target="_blank" rel="noopener" title="GitHub 仓库">源码</a>
       <button class="btn" onclick="toggleChangelog(this)">更新日志</button>
     </div>
 

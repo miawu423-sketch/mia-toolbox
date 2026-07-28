@@ -2,22 +2,21 @@
 
 一个持续更新中的数据处理小工具集。全部纯前端运行，数据不出本地浏览器。
 
+## 🌐 在线使用
+
+**门户：** https://miawu423-sketch.github.io/mia-toolbox/
+
+收藏门户 URL 即可。每个工具有独立仓库、独立迭代，门户始终指向最新版本。
+
 ## 📦 收录工具
 
-| # | 工具 | 说明 |
+| # | 工具 | 仓库 |
 |---|---|---|
-| 01 | 随机抽样 | 从表格/文本中按数量或比例随机抽样 |
-| 02 | 表格数据去重 | 上传 Excel/CSV，按列去重导出 |
-| 03 | URL encode/decode | URL 编码解码，支持批量 |
-| 04 | 长表格查看器 | 大数据表格分页/搜索/筛选查看 |
-
-## 🚀 使用方式
-
-**方式一：在线（推荐）**
-直接访问部署好的 URL（部署后填写）。
-
-**方式二：本地**
-下载整个仓库 → 双击 `index.html` 即可使用。
+| 01 | 随机抽样 | [random-sampler](https://github.com/miawu423-sketch/random-sampler) |
+| 02 | 表格数据去重 | [dedup-tool](https://github.com/miawu423-sketch/dedup-tool) |
+| 03 | URL encode/decode | [url-encoder-tool](https://github.com/miawu423-sketch/url-encoder-tool) |
+| 04 | 长表格查看器 | [long-cell-viewer](https://github.com/miawu423-sketch/long-cell-viewer) |
+| 05 | 网页内容复制（Chrome 扩展） | [web-ocr-copy](https://github.com/miawu423-sketch/web-ocr-copy) |
 
 ## 🔒 数据安全
 
