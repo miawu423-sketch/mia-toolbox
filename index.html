@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>工具箱 for 数据处理</title>
+<title>工具箱</title>
 <style>
   :root {
     --bg: #f6f7fb;
@@ -419,13 +419,13 @@
   <!-- Header -->
   <div class="hero">
     <div class="hero-left">
-      <h1>🧰 工具箱 <span style="color: var(--text-muted); font-weight: 500; font-size: 22px;">for 数据处理</span></h1>
+      <h1>🧰 工具箱</h1>
       <div class="subtitle">持续更新中 · 全部工具纯前端运行，数据不出本地浏览器</div>
     </div>
     <div class="hero-right">
       <div class="stats">
         <span class="pill">5 个工具</span>
-        <span class="pill">v1.2.0</span>
+        <span class="pill">v1.2.1</span>
       </div>
       <button class="btn-sticky" onclick="openStickyNote()">📝 工具箱更新日志</button>
     </div>
@@ -580,10 +580,19 @@ const TOOLS = [
 /* ============ 工具箱整体更新日志 ============ */
 const TOOLBOX_CHANGELOG = [
   {
+    ver: 'v1.2.1',
+    date: '2026-07-29',
+    items: [
+      '✏️ 工具箱去掉「for 数据处理」后缀 —— 后续会收录数据处理以外的工具',
+      '⏰ 每日检测时间调整为「工作日上午 10:30」（原每天 09:00，避开电脑还没开机的时段）',
+      '🧹 顺手清理了几处过时文案',
+    ],
+  },
+  {
     ver: 'v1.2.0',
     date: '2026-07-29',
     items: [
-      '🤖 新增每日自动检测：每天 09:00 扫描 5 个工具仓库，有新 commit 则自动追加到卡片更新日志',
+      '🤖 新增每日自动检测：工作日 10:30 扫描 5 个工具仓库，有新 commit 则自动追加到卡片更新日志',
       '🆕 当日检测到工具有新版本时，卡片标题右侧显示「🆕 今日更新」徽章（次日消失）',
       '📦 更新日志抽屉里的自动条目用黄色「📦 自动」标签区分，当日新增的用醒目橙红色高亮',
       '📅 卡片头部展示每个工具的「最近更新」日期',
@@ -630,8 +639,8 @@ const TOOLBOX_CHANGELOG = [
     date: '2026-07-27',
     items: [
       '🎉 工具箱首次上线',
-      '每个工具卡片支持"使用场景 + 版本 + 更新日志"',
-      '整个工具箱纯前端，双击 index.html 即可使用',
+      '每个工具卡片支持「使用场景 + 版本 + 更新日志」',
+      '整个工具箱纯前端，浏览器打开即用',
     ],
   },
 ];
