@@ -1,0 +1,41 @@
+{
+  "_comment": "由 scripts/check-updates.py 每天自动维护。每个工具的 key 对应 index.html TOOLS 数组里的 slug。lastUpdated 为 YYYY-MM-DD，若等于用户当天则门户显示「🆕 今日更新」徽章。autoChangelog 是脚本自动追加的最近若干次提交摘要。",
+  "checkedAt": "2026-07-29",
+  "tools": {
+    "random-sampler": {
+      "repo": "miawu423-sketch/random-sampler",
+      "lastSha": "be961a22526adc30920ca04eca4599bcf638c335",
+      "lastUpdated": "2026-07-28",
+      "autoChangelog": []
+    },
+    "dedup-tool": {
+      "repo": "miawu423-sketch/dedup-tool",
+      "lastSha": "dfe3b0bc5e354cc3ce39e364ce48034d4a360698",
+      "lastUpdated": "2026-07-28",
+      "autoChangelog": []
+    },
+    "url-encoder-tool": {
+      "repo": "miawu423-sketch/url-encoder-tool",
+      "lastSha": "7703be658f128e73e0a4357f0a6824dde0eaaae1",
+      "lastUpdated": "2026-07-28",
+      "autoChangelog": []
+    },
+    "long-cell-viewer": {
+      "repo": "miawu423-sketch/long-cell-viewer",
+      "lastSha": "d1a7f93881ab901f9a01ad458c6a9f558308f590",
+      "lastUpdated": "2026-07-28",
+      "autoChangelog": []
+    },
+    "web-ocr-copy": {
+      "repo": "miawu423-sketch/web-ocr-copy",
+      "lastSha": "9e9dfd880e2edb3dda0ece8299651be74aaf4f71",
+      "lastUpdated": "2026-07-29",
+      "autoChangelog": [
+        {
+          "date": "2026-07-29",
+          "msg": "feat: 新增「去空行」按钮，支持选区"
+        }
+      ]
+    }
+  }
+}

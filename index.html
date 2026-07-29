@@ -141,6 +141,32 @@
     letter-spacing: 0.3px;
     vertical-align: middle;
   }
+  .badge-new {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    margin-left: 4px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    vertical-align: middle;
+    animation: badgePulse 2s ease-in-out infinite;
+    box-shadow: 0 2px 6px rgba(255, 107, 107, 0.3);
+  }
+  @keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+  }
+  .changelog-item.is-auto .ver {
+    background: #fef3c7;
+    color: #b45309;
+  }
+  .changelog-item.is-today .ver {
+    background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+    color: #fff;
+  }
   .card-desc {
     font-size: 13.5px;
     color: var(--text);
@@ -399,7 +425,7 @@
     <div class="hero-right">
       <div class="stats">
         <span class="pill">5 个工具</span>
-        <span class="pill">v1.1.1</span>
+        <span class="pill">v1.2.0</span>
       </div>
       <button class="btn-sticky" onclick="openStickyNote()">📝 工具箱更新日志</button>
     </div>
@@ -457,6 +483,7 @@
 /* ============ 数据：4 个工具 ============ */
 const TOOLS = [
   {
+    slug: 'random-sampler',
     url: 'https://miawu423-sketch.github.io/random-sampler/random-sampler.html',
     repo: 'https://github.com/miawu423-sketch/random-sampler',
     icon: '🎲',
@@ -475,6 +502,7 @@ const TOOLS = [
     ],
   },
   {
+    slug: 'dedup-tool',
     url: 'https://miawu423-sketch.github.io/dedup-tool/',
     repo: 'https://github.com/miawu423-sketch/dedup-tool',
     icon: '✨',
@@ -492,6 +520,7 @@ const TOOLS = [
     ],
   },
   {
+    slug: 'url-encoder-tool',
     url: 'https://miawu423-sketch.github.io/url-encoder-tool/',
     repo: 'https://github.com/miawu423-sketch/url-encoder-tool',
     icon: '🔗',
@@ -509,6 +538,7 @@ const TOOLS = [
     ],
   },
   {
+    slug: 'long-cell-viewer',
     url: 'https://miawu423-sketch.github.io/long-cell-viewer/',
     repo: 'https://github.com/miawu423-sketch/long-cell-viewer',
     icon: '📋',
@@ -526,6 +556,7 @@ const TOOLS = [
     ],
   },
   {
+    slug: 'web-ocr-copy',
     url: 'https://github.com/miawu423-sketch/web-ocr-copy#readme',
     repo: 'https://github.com/miawu423-sketch/web-ocr-copy',
     download: 'https://github.com/miawu423-sketch/web-ocr-copy/archive/refs/heads/main.zip',
@@ -548,6 +579,16 @@ const TOOLS = [
 
 /* ============ 工具箱整体更新日志 ============ */
 const TOOLBOX_CHANGELOG = [
+  {
+    ver: 'v1.2.0',
+    date: '2026-07-29',
+    items: [
+      '🤖 新增每日自动检测：每天 09:00 扫描 5 个工具仓库，有新 commit 则自动追加到卡片更新日志',
+      '🆕 当日检测到工具有新版本时，卡片标题右侧显示「🆕 今日更新」徽章（次日消失）',
+      '📦 更新日志抽屉里的自动条目用黄色「📦 自动」标签区分，当日新增的用醒目橙红色高亮',
+      '📅 卡片头部展示每个工具的「最近更新」日期',
+    ],
+  },
   {
     ver: 'v1.1.1',
     date: '2026-07-28',
@@ -597,16 +638,60 @@ const TOOLBOX_CHANGELOG = [
 
 /* ============ 渲染卡片 ============ */
 const grid = document.getElementById('grid');
-TOOLS.forEach((t, idx) => {
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.innerHTML = `
+
+// 获取今天日期（YYYY-MM-DD，本地时区）
+function todayStr() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// 拉取 tool-state.json（由 scripts/check-updates.py 每日自动更新）
+async function loadState() {
+  try {
+    const resp = await fetch('tool-state.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!resp.ok) return {};
+    const data = await resp.json();
+    return data.tools || {};
+  } catch (e) {
+    console.warn('tool-state.json 未加载：', e);
+    return {};
+  }
+}
+
+function renderCards(stateMap) {
+  const today = todayStr();
+  grid.innerHTML = '';
+  TOOLS.forEach((t, idx) => {
+    const st = stateMap[t.slug] || {};
+    const isToday = st.lastUpdated === today;
+    const autoLog = st.autoChangelog || [];
+
+    // 合并：自动日志在前（更新鲜），原静态 changelog 在后
+    const mergedLog = [
+      ...autoLog.map(c => ({
+        ver: '📦 自动',
+        date: c.date,
+        desc: c.msg,
+        isAuto: true,
+        isToday: c.date === today,
+      })),
+      ...t.changelog.map(c => ({ ...c, isAuto: false, isToday: false })),
+    ];
+
+    const newBadge = isToday ? `<span class="badge-new" title="今日检测到该工具有新版本">🆕 今日更新</span>` : '';
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
     <div class="card-head">
       <div style="display:flex; gap:12px; align-items:flex-start;">
         <div class="card-icon">${t.icon}</div>
         <div>
-          <div class="card-title">${t.name} <span class="card-version">${t.version}</span></div>
-          <div style="color: var(--text-muted); font-size: 12px;">Tool ${String(idx + 1).padStart(2,'0')}</div>
+          <div class="card-title">${t.name} <span class="card-version">${t.version}</span>${newBadge}</div>
+          <div style="color: var(--text-muted); font-size: 12px;">Tool ${String(idx + 1).padStart(2,'0')}${st.lastUpdated ? ` · 最近更新 ${st.lastUpdated}` : ''}</div>
         </div>
       </div>
     </div>
@@ -633,8 +718,8 @@ TOOLS.forEach((t, idx) => {
 
     <div class="changelog">
       <div class="changelog-inner">
-        ${t.changelog.map(c => `
-          <div class="changelog-item">
+        ${mergedLog.map(c => `
+          <div class="changelog-item${c.isAuto ? ' is-auto' : ''}${c.isToday ? ' is-today' : ''}">
             <span class="ver">${c.ver}</span>
             <span class="desc">${c.desc} <span class="date">· ${c.date}</span></span>
           </div>
@@ -642,8 +727,12 @@ TOOLS.forEach((t, idx) => {
       </div>
     </div>
   `;
-  grid.appendChild(card);
-});
+    grid.appendChild(card);
+  });
+}
+
+// 启动：先拉 state 再渲染（拉不到也能渲染，只是没有徽章）
+loadState().then(renderCards);
 
 function toggleChangelog(btn) {
   const drawer = btn.closest('.card').querySelector('.changelog');
