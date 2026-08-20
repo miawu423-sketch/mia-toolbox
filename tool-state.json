@@ -1,12 +1,17 @@
 {
   "_comment": "由 scripts/check-updates.py 每天自动维护。每个工具的 key 对应 index.html TOOLS 数组里的 slug。lastUpdated 为 YYYY-MM-DD，若等于用户当天则门户显示「🆕 今日更新」徽章。autoChangelog 是脚本自动追加的最近若干次提交摘要。",
-  "checkedAt": "2026-08-11",
+  "checkedAt": "2026-08-20",
   "tools": {
     "random-sampler": {
       "repo": "miawu423-sketch/random-sampler",
-      "lastSha": "be961a22526adc30920ca04eca4599bcf638c335",
-      "lastUpdated": "2026-07-28",
-      "autoChangelog": []
+      "lastSha": "af379a70686025492ca1d218ea87dd837c98c2e7",
+      "lastUpdated": "2026-08-20",
+      "autoChangelog": [
+        {
+          "date": "2026-08-19",
+          "msg": "导出功能升级：支持 CSV/XLSX 双格式，CSV 分结果/配置两文件导出"
+        }
+      ]
     },
     "dedup-tool": {
       "repo": "miawu423-sketch/dedup-tool",
