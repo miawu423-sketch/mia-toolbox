@@ -1,6 +1,6 @@
 {
   "_comment": "由 scripts/check-updates.py 每天自动维护。每个工具的 key 对应 index.html TOOLS 数组里的 slug。lastUpdated 为 YYYY-MM-DD，若等于用户当天则门户显示「🆕 今日更新」徽章。autoChangelog 是脚本自动追加的最近若干次提交摘要。",
-  "checkedAt": "2026-09-23",
+  "checkedAt": "2026-11-10",
   "tools": {
     "random-sampler": {
       "repo": "miawu423-sketch/random-sampler",
@@ -39,9 +39,13 @@
     },
     "web-ocr-copy": {
       "repo": "miawu423-sketch/web-ocr-copy",
-      "lastSha": "e4bf65a54df17f46cf65a5afbfc960d80fcd563c",
-      "lastUpdated": "2026-08-11",
+      "lastSha": "7f2488d21ad926203425bb003106cc65e43c1bd3",
+      "lastUpdated": "2026-11-10",
       "autoChangelog": [
+        {
+          "date": "2026-11-09",
+          "msg": "fix: 为 OCR 卡死问题加诊断与超时保护"
+        },
         {
           "date": "2026-08-10",
           "msg": "fix: 修复跨域图片导致 canvas 污染 getImageData 报错"
