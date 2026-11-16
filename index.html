@@ -424,8 +424,8 @@
     </div>
     <div class="hero-right">
       <div class="stats">
-        <span class="pill">6 个工具</span>
-        <span class="pill">v1.3.0</span>
+        <span class="pill">7 个工具</span>
+        <span class="pill">v1.4.0</span>
       </div>
       <button class="btn-sticky" onclick="openStickyNote()">📝 通用工具箱更新日志</button>
     </div>
@@ -574,6 +574,24 @@ const TOOLS = [
     ],
   },
   {
+    slug: 'long-text-reader',
+    url: 'https://miawu423-sketch.github.io/long-text-reader/',
+    repo: 'https://github.com/miawu423-sketch/long-text-reader',
+    icon: '📖',
+    name: '长文本阅读器',
+    version: 'v1.0',
+    desc: '粘贴大段摘要或全文即可阅读，自动识别纯文本 / Markdown，支持划词四色高亮、批注、搜索和目录，批注可一键复制。',
+    scenarios: [
+      '网页质量打分时浏览大段摘要 / 全文',
+      '从 CSV / JSON 字段复制出的带 \\n 的长文本，还原换行后阅读',
+      '边读边标重点、写批注，整理后贴进打分表',
+    ],
+    tags: ['Markdown 渲染', '划词批注', '搜索定位'],
+    changelog: [
+      { ver: 'v1.0', date: '2026-11', desc: '首个版本：格式自动识别 / 四色高亮与批注 / 搜索 / 目录 / 阅读设置' },
+    ],
+  },
+  {
     slug: 'web-ocr-copy',
     url: 'https://github.com/miawu423-sketch/web-ocr-copy#readme',
     repo: 'https://github.com/miawu423-sketch/web-ocr-copy',
@@ -597,6 +615,13 @@ const TOOLS = [
 
 /* ============ 工具箱整体更新日志 ============ */
 const TOOLBOX_CHANGELOG = [
+  {
+    ver: 'v1.4.0',
+    date: '2026-11-16',
+    items: [
+      '📖 新增工具「长文本阅读器」：粘贴即读，自动识别纯文本 / Markdown，支持划词高亮、批注、搜索和目录',
+    ],
+  },
   {
     ver: 'v1.3.0',
     date: '2026-09-23',

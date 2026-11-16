@@ -1,6 +1,6 @@
 {
   "_comment": "由 scripts/check-updates.py 每天自动维护。每个工具的 key 对应 index.html TOOLS 数组里的 slug。lastUpdated 为 YYYY-MM-DD，若等于用户当天则门户显示「🆕 今日更新」徽章。autoChangelog 是脚本自动追加的最近若干次提交摘要。",
-  "checkedAt": "2026-11-11",
+  "checkedAt": "2026-11-16",
   "tools": {
     "random-sampler": {
       "repo": "miawu423-sketch/random-sampler",
@@ -35,6 +35,12 @@
       "repo": "miawu423-sketch/long-cell-viewer",
       "lastSha": "d1a7f93881ab901f9a01ad458c6a9f558308f590",
       "lastUpdated": "2026-07-28",
+      "autoChangelog": []
+    },
+    "long-text-reader": {
+      "repo": "miawu423-sketch/long-text-reader",
+      "lastSha": "e9ea505809622f8b977a998a64be07fc836683c0",
+      "lastUpdated": "2026-11-16",
       "autoChangelog": []
     },
     "web-ocr-copy": {
